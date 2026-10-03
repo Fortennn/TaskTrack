@@ -1,3 +1,4 @@
+using Scalar.AspNetCore;
 using TaskTracker.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
+    
+    // Перенаправление с корневого URL на интерактивный интерфейс документации
+    app.MapGet("/", () => Results.Redirect("/scalar/v1"));
 }
 
 app.UseHttpsRedirection();
