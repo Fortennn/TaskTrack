@@ -4,20 +4,19 @@ using TaskTracker.Application.Common.Interfaces;
 using TaskTracker.Application.DTOs.Comments;
 using TaskTracker.Application.DTOs.Tasks;
 using TaskTracker.Domain.Entities;
+using TaskTracker.Domain.Exceptions;
 
 namespace TaskTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/tasks")]
-public class TasksController : ControllerBase
+public sealed class TasksController : ControllerBase
 {
     private readonly ITaskRepository _taskRepository;
-    private readonly IProjectRepository _projectRepository;
 
-    public TasksController(ITaskRepository taskRepository, IProjectRepository projectRepository)
+    public TasksController(ITaskRepository taskRepository)
     {
         _taskRepository = taskRepository;
-        _projectRepository = projectRepository;
     }
 
     /// <summary>
@@ -38,11 +37,8 @@ public class TasksController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TaskDetailDto>> GetTaskById(Guid id, CancellationToken cancellationToken)
     {
-        var task = await _taskRepository.GetDetailByIdAsync(id, cancellationToken);
-        if (task == null)
-        {
-            return NotFound(new { message = $"Task with Id '{id}' not found." });
-        }
+        var task = await _taskRepository.GetDetailByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"Task with Id '{id}' does not exist.");
 
         return Ok(task);
     }
@@ -55,12 +51,6 @@ public class TasksController : ControllerBase
         [FromBody] CreateTaskRequest request, 
         CancellationToken cancellationToken)
     {
-        var projectExists = await _projectRepository.ExistsAsync(request.ProjectId, cancellationToken);
-        if (!projectExists)
-        {
-            return BadRequest(new { message = $"Project with Id '{request.ProjectId}' does not exist." });
-        }
-
         var task = new TaskItem(
             request.Title,
             request.ProjectId,
@@ -84,11 +74,8 @@ public class TasksController : ControllerBase
         Guid taskId, 
         CancellationToken cancellationToken)
     {
-        var task = await _taskRepository.GetByIdAsync(taskId, cancellationToken);
-        if (task == null)
-        {
-            return NotFound(new { message = $"Task with Id '{taskId}' not found." });
-        }
+        _ = await _taskRepository.GetByIdAsync(taskId, cancellationToken)
+            ?? throw new NotFoundException($"Task with Id '{taskId}' does not exist.");
 
         var comments = await _taskRepository.GetCommentsByTaskIdAsync(taskId, cancellationToken);
         return Ok(comments);
@@ -103,23 +90,16 @@ public class TasksController : ControllerBase
         [FromBody] CreateCommentRequest request, 
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var comment = await _taskRepository.AddCommentAsync(taskId, request.AuthorId, request.Text, cancellationToken);
-            
-            var responseDto = new CommentDto(
-                comment.Id,
-                comment.TaskId,
-                comment.AuthorId,
-                string.Empty,
-                comment.Text,
-                comment.CreatedAt);
+        var comment = await _taskRepository.AddCommentAsync(taskId, request.AuthorId, request.Text, cancellationToken);
+        
+        var responseDto = new CommentDto(
+            comment.Id,
+            comment.TaskId,
+            comment.AuthorId,
+            string.Empty,
+            comment.Text,
+            comment.CreatedAt);
 
-            return CreatedAtAction(nameof(GetComments), new { taskId = taskId }, responseDto);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return CreatedAtAction(nameof(GetComments), new { taskId = taskId }, responseDto);
     }
 }

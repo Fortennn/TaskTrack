@@ -1,13 +1,15 @@
+using System.ComponentModel.DataAnnotations;
 using TaskTracker.Domain.Enums;
 using TaskStatus = TaskTracker.Domain.Enums.TaskStatus;
 
 namespace TaskTracker.Application.DTOs.Tasks;
 
-public sealed class TaskQueryParameters
+public sealed class TaskQueryParameters : IValidatableObject
 {
     private const int MaxPageSize = 100;
     private int _pageSize = 20;
 
+    [Range(1, int.MaxValue, ErrorMessage = "Page must be greater than or equal to 1.")]
     public int Page { get; init; } = 1;
 
     public int PageSize
@@ -25,4 +27,14 @@ public sealed class TaskQueryParameters
     public DateOnly? DueDateTo { get; init; }
     public string SortBy { get; init; } = "createdAt";
     public string Order { get; init; } = "desc";
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (DueDateFrom.HasValue && DueDateTo.HasValue && DueDateFrom > DueDateTo)
+        {
+            yield return new ValidationResult(
+                "DueDateFrom must be earlier than or equal to DueDateTo.",
+                [nameof(DueDateFrom), nameof(DueDateTo)]);
+        }
+    }
 }

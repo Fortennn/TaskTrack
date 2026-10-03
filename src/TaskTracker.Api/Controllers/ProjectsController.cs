@@ -4,12 +4,13 @@ using TaskTracker.Application.Common.Interfaces;
 using TaskTracker.Application.DTOs.Projects;
 using TaskTracker.Application.DTOs.Tasks;
 using TaskTracker.Domain.Entities;
+using TaskTracker.Domain.Exceptions;
 
 namespace TaskTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/projects")]
-public class ProjectsController : ControllerBase
+public sealed class ProjectsController : ControllerBase
 {
     private readonly IProjectRepository _projectRepository;
     private readonly ITaskRepository _taskRepository;
@@ -38,11 +39,8 @@ public class ProjectsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProjectDetailDto>> GetProjectById(Guid id, CancellationToken cancellationToken)
     {
-        var project = await _projectRepository.GetDetailByIdAsync(id, cancellationToken);
-        if (project == null)
-        {
-            return NotFound(new { message = $"Project with Id '{id}' not found." });
-        }
+        var project = await _projectRepository.GetDetailByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"Project with Id '{id}' does not exist.");
 
         return Ok(project);
     }
@@ -81,7 +79,7 @@ public class ProjectsController : ControllerBase
         var projectExists = await _projectRepository.ExistsAsync(projectId, cancellationToken);
         if (!projectExists)
         {
-            return NotFound(new { message = $"Project with Id '{projectId}' not found." });
+            throw new NotFoundException($"Project with Id '{projectId}' does not exist.");
         }
 
         var task = new TaskItem(

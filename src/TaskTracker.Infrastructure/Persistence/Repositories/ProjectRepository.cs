@@ -4,6 +4,7 @@ using TaskTracker.Application.Common.Interfaces;
 using TaskTracker.Application.DTOs.Projects;
 using TaskTracker.Application.DTOs.Tasks;
 using TaskTracker.Domain.Entities;
+using TaskTracker.Domain.Exceptions;
 using TaskTracker.Infrastructure.Persistence;
 
 namespace TaskTracker.Infrastructure.Persistence.Repositories;
@@ -97,6 +98,12 @@ public class ProjectRepository : IProjectRepository
 
     public async Task AddAsync(Project project, CancellationToken cancellationToken = default)
     {
+        var nameExists = await _context.Projects.AnyAsync(p => p.Name == project.Name, cancellationToken);
+        if (nameExists)
+        {
+            throw new ConflictException($"Project with name '{project.Name}' already exists.");
+        }
+
         await _context.Projects.AddAsync(project, cancellationToken);
     }
 

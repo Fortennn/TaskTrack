@@ -1,49 +1,75 @@
 @Host = http://localhost:5057
 
-### 1. Отримати список проєктів з пагінацією та кількістю задач
-GET {{Host}}/api/projects?page=1&pageSize=10
-Accept: application/json
+### ===================================================================
+### УСПІШНІ СЦЕНАРІЇ (SUCCESS SCENARIOS)
+### ===================================================================
 
-### 2. Створити новий проєкт
+### 1. Створити новий проєкт
 # @name createProject
 POST {{Host}}/api/projects
 Content-Type: application/json
 
 {
-  "name": "TaskTracker Web Application",
-  "description": "Розробка системи управління задачами"
+  "name": "TaskTracker Web Platform",
+  "description": "Enterprise Task Management System"
 }
 
 ### Зберегти ID створеного проєкту
 @projectId = {{createProject.response.body.id}}
 
-### 3. Отримати проєкт за ID (детально із задачами)
-GET {{Host}}/api/projects/{{projectId}}
-Accept: application/json
-
-### 4. Створити задачу всередині проєкту (вкладений ендпоінт)
+### 2. Створити задачу з валідною датою у майбутньому ([FutureDate])
 # @name createTask
 POST {{Host}}/api/projects/{{projectId}}/tasks
 Content-Type: application/json
 
 {
-  "title": "Створити DTO та пагінацію",
-  "description": "Реалізувати оптимізовані запити без N+1",
+  "title": "Реалізувати валідацію та Problem Details",
+  "description": "Практична робота №4",
   "priority": "High",
-  "dueDate": "2026-10-15T18:00:00Z"
+  "dueDate": "2027-12-31T23:59:59Z"
 }
 
 ### Зберегти ID створеної задачі
 @taskId = {{createTask.response.body.id}}
 
-### 5. Отримати список задач із фільтрами, пошуком та пагінацією
-GET {{Host}}/api/tasks?page=1&pageSize=10&search=DTO&sortBy=createdAt&order=desc
+### 3. Отримати список задач із пагінацією та фільтрацією
+GET {{Host}}/api/tasks?page=1&pageSize=10&dueDateFrom=2026-01-01&dueDateTo=2028-01-01
 Accept: application/json
 
-### 6. Отримати задачу за ID (детально з коментарями)
-GET {{Host}}/api/tasks/{{taskId}}
+### ===================================================================
+### ТЕСТУВАННЯ МАТРИЦІ ПОМИЛОК (ERROR MATRIX & PROBLEM DETAILS)
+### ===================================================================
+
+### 4. Тест 400 Bad Request: Відсутнє обов'язкове поле Title ([Required])
+POST {{Host}}/api/projects/{{projectId}}/tasks
+Content-Type: application/json
+
+{
+  "description": "Без заголовка"
+}
+
+### 5. Тест 400 Bad Request: Дата у минулому ([FutureDate])
+POST {{Host}}/api/projects/{{projectId}}/tasks
+Content-Type: application/json
+
+{
+  "title": "Задача з датою у минулому",
+  "dueDate": "2020-01-01T00:00:00Z"
+}
+
+### 6. Тест 400 Bad Request: Взаємозалежні поля (DueDateFrom > DueDateTo) (IValidatableObject)
+GET {{Host}}/api/tasks?dueDateFrom=2028-01-01&dueDateTo=2026-01-01
 Accept: application/json
 
-### 7. Отримати коментарі задачі (вкладений ендпоінт)
-GET {{Host}}/api/tasks/{{taskId}}/comments
+### 7. Тест 404 Not Found: Запит неіснуючого ресурсу (NotFoundException -> Problem Details)
+GET {{Host}}/api/tasks/00000000-0000-0000-0000-000000000000
 Accept: application/json
+
+### 8. Тест 409 Conflict: Спроба створити проєкт з уже існуючою назвою (ConflictException)
+POST {{Host}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "TaskTracker Web Platform",
+  "description": "Дублікат назви"
+}
