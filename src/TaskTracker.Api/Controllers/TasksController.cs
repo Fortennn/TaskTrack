@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskTracker.Application.Common;
-using TaskTracker.Application.Common.Interfaces;
 using TaskTracker.Application.DTOs.Comments;
 using TaskTracker.Application.DTOs.Tasks;
-using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Exceptions;
+using TaskTracker.Application.Services;
 
 namespace TaskTracker.Api.Controllers;
 
@@ -12,11 +10,11 @@ namespace TaskTracker.Api.Controllers;
 [Route("api/tasks")]
 public sealed class TasksController : ControllerBase
 {
-    private readonly ITaskRepository _taskRepository;
+    private readonly ITaskService _taskService;
 
-    public TasksController(ITaskRepository taskRepository)
+    public TasksController(ITaskService taskService)
     {
-        _taskRepository = taskRepository;
+        _taskService = taskService;
     }
 
     /// <summary>
@@ -27,7 +25,7 @@ public sealed class TasksController : ControllerBase
         [FromQuery] TaskQueryParameters parameters, 
         CancellationToken cancellationToken)
     {
-        var result = await _taskRepository.GetPagedAsync(parameters, cancellationToken);
+        var result = await _taskService.GetPagedAsync(parameters, cancellationToken);
         return Ok(result);
     }
 
@@ -37,9 +35,7 @@ public sealed class TasksController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TaskDetailDto>> GetTaskById(Guid id, CancellationToken cancellationToken)
     {
-        var task = await _taskRepository.GetDetailByIdAsync(id, cancellationToken)
-            ?? throw new NotFoundException($"Task with Id '{id}' does not exist.");
-
+        var task = await _taskService.GetByIdAsync(id, cancellationToken);
         return Ok(task);
     }
 
@@ -51,19 +47,8 @@ public sealed class TasksController : ControllerBase
         [FromBody] CreateTaskRequest request, 
         CancellationToken cancellationToken)
     {
-        var task = new TaskItem(
-            request.Title,
-            request.ProjectId,
-            request.Description,
-            request.Priority,
-            request.DueDate,
-            request.AssigneeId);
-
-        await _taskRepository.AddAsync(task, cancellationToken);
-        await _taskRepository.SaveChangesAsync(cancellationToken);
-
-        var createdTaskDto = await _taskRepository.GetDetailByIdAsync(task.Id, cancellationToken);
-        return CreatedAtAction(nameof(GetTaskById), new { id = task.Id }, createdTaskDto);
+        var createdTask = await _taskService.CreateAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(GetTaskById), new { id = createdTask.Id }, createdTask);
     }
 
     /// <summary>
@@ -74,10 +59,7 @@ public sealed class TasksController : ControllerBase
         Guid taskId, 
         CancellationToken cancellationToken)
     {
-        _ = await _taskRepository.GetByIdAsync(taskId, cancellationToken)
-            ?? throw new NotFoundException($"Task with Id '{taskId}' does not exist.");
-
-        var comments = await _taskRepository.GetCommentsByTaskIdAsync(taskId, cancellationToken);
+        var comments = await _taskService.GetCommentsAsync(taskId, cancellationToken);
         return Ok(comments);
     }
 
@@ -90,16 +72,7 @@ public sealed class TasksController : ControllerBase
         [FromBody] CreateCommentRequest request, 
         CancellationToken cancellationToken)
     {
-        var comment = await _taskRepository.AddCommentAsync(taskId, request.AuthorId, request.Text, cancellationToken);
-        
-        var responseDto = new CommentDto(
-            comment.Id,
-            comment.TaskId,
-            comment.AuthorId,
-            string.Empty,
-            comment.Text,
-            comment.CreatedAt);
-
-        return CreatedAtAction(nameof(GetComments), new { taskId = taskId }, responseDto);
+        var comment = await _taskService.AddCommentAsync(taskId, request, cancellationToken);
+        return CreatedAtAction(nameof(GetComments), new { taskId = taskId }, comment);
     }
 }

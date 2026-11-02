@@ -1,5 +1,6 @@
 using Scalar.AspNetCore;
 using TaskTracker.Api.Middleware;
+using TaskTracker.Application;
 using TaskTracker.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +12,8 @@ builder.Services.AddProblemDetails(options =>
         context.ProblemDetails.Type = null;
 });
 
-// Реєстрація шару Infrastructure (DbContext та репозиторії)
+// Реєстрація шарів Application та Infrastructure
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers();

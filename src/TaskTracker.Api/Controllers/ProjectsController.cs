@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskTracker.Application.Common;
-using TaskTracker.Application.Common.Interfaces;
 using TaskTracker.Application.DTOs.Projects;
 using TaskTracker.Application.DTOs.Tasks;
-using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Exceptions;
+using TaskTracker.Application.Services;
 
 namespace TaskTracker.Api.Controllers;
 
@@ -12,13 +10,13 @@ namespace TaskTracker.Api.Controllers;
 [Route("api/projects")]
 public sealed class ProjectsController : ControllerBase
 {
-    private readonly IProjectRepository _projectRepository;
-    private readonly ITaskRepository _taskRepository;
+    private readonly IProjectService _projectService;
+    private readonly ITaskService _taskService;
 
-    public ProjectsController(IProjectRepository projectRepository, ITaskRepository taskRepository)
+    public ProjectsController(IProjectService projectService, ITaskService taskService)
     {
-        _projectRepository = projectRepository;
-        _taskRepository = taskRepository;
+        _projectService = projectService;
+        _taskService = taskService;
     }
 
     /// <summary>
@@ -29,7 +27,7 @@ public sealed class ProjectsController : ControllerBase
         [FromQuery] ProjectQueryParameters parameters, 
         CancellationToken cancellationToken)
     {
-        var result = await _projectRepository.GetPagedAsync(parameters, cancellationToken);
+        var result = await _projectService.GetPagedAsync(parameters, cancellationToken);
         return Ok(result);
     }
 
@@ -39,9 +37,7 @@ public sealed class ProjectsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProjectDetailDto>> GetProjectById(Guid id, CancellationToken cancellationToken)
     {
-        var project = await _projectRepository.GetDetailByIdAsync(id, cancellationToken)
-            ?? throw new NotFoundException($"Project with Id '{id}' does not exist.");
-
+        var project = await _projectService.GetByIdAsync(id, cancellationToken);
         return Ok(project);
     }
 
@@ -53,18 +49,8 @@ public sealed class ProjectsController : ControllerBase
         [FromBody] CreateProjectRequest request, 
         CancellationToken cancellationToken)
     {
-        var project = new Project(request.Name, request.Description);
-        await _projectRepository.AddAsync(project, cancellationToken);
-        await _projectRepository.SaveChangesAsync(cancellationToken);
-
-        var dto = new ProjectDto(
-            project.Id,
-            project.Name,
-            project.Description,
-            0,
-            project.CreatedAt);
-
-        return CreatedAtAction(nameof(GetProjectById), new { id = project.Id }, dto);
+        var createdProject = await _projectService.CreateAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(GetProjectById), new { id = createdProject.Id }, createdProject);
     }
 
     /// <summary>
@@ -76,24 +62,7 @@ public sealed class ProjectsController : ControllerBase
         [FromBody] CreateTaskRequest request, 
         CancellationToken cancellationToken)
     {
-        var projectExists = await _projectRepository.ExistsAsync(projectId, cancellationToken);
-        if (!projectExists)
-        {
-            throw new NotFoundException($"Project with Id '{projectId}' does not exist.");
-        }
-
-        var task = new TaskItem(
-            request.Title,
-            projectId,
-            request.Description,
-            request.Priority,
-            request.DueDate,
-            request.AssigneeId);
-
-        await _taskRepository.AddAsync(task, cancellationToken);
-        await _taskRepository.SaveChangesAsync(cancellationToken);
-
-        var createdTaskDto = await _taskRepository.GetDetailByIdAsync(task.Id, cancellationToken);
-        return CreatedAtAction("GetTaskById", "Tasks", new { id = task.Id }, createdTaskDto);
+        var createdTaskDto = await _taskService.CreateForProjectAsync(projectId, request, cancellationToken);
+        return CreatedAtAction("GetTaskById", "Tasks", new { id = createdTaskDto.Id }, createdTaskDto);
     }
 }

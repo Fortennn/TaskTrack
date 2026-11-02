@@ -10,8 +10,9 @@ public interface ITaskRepository
     Task<TaskItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TaskDetailDto?> GetDetailByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<PagedResult<TaskDto>> GetPagedAsync(TaskQueryParameters parameters, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CommentDto>> GetCommentsByTaskIdAsync(Guid taskId, CancellationToken cancellationToken = default);
-    Task<Comment> AddCommentAsync(Guid taskId, Guid authorId, string text, CancellationToken cancellationToken = default);
+    Task AddCommentAsync(Comment comment, CancellationToken cancellationToken = default);
     Task AddAsync(TaskItem task, CancellationToken cancellationToken = default);
     void Update(TaskItem task);
     void Delete(TaskItem task);

@@ -4,7 +4,6 @@ using TaskTracker.Application.Common.Interfaces;
 using TaskTracker.Application.DTOs.Comments;
 using TaskTracker.Application.DTOs.Tasks;
 using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Exceptions;
 using TaskTracker.Infrastructure.Persistence;
 
 namespace TaskTracker.Infrastructure.Persistence.Repositories;
@@ -141,6 +140,11 @@ public class TaskRepository : ITaskRepository
             parameters.PageSize);
     }
 
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Tasks.AnyAsync(t => t.Id == id, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CommentDto>> GetCommentsByTaskIdAsync(Guid taskId, CancellationToken cancellationToken = default)
     {
         return await _context.Comments
@@ -157,44 +161,13 @@ public class TaskRepository : ITaskRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<Comment> AddCommentAsync(Guid taskId, Guid authorId, string text, CancellationToken cancellationToken = default)
+    public async Task AddCommentAsync(Comment comment, CancellationToken cancellationToken = default)
     {
-        var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId, cancellationToken);
-        if (task == null)
-        {
-            throw new NotFoundException($"Task with Id '{taskId}' does not exist.");
-        }
-
-        var authorExists = await _context.Users.AnyAsync(u => u.Id == authorId, cancellationToken);
-        if (!authorExists)
-        {
-            throw new NotFoundException($"User with Id '{authorId}' does not exist.");
-        }
-
-        var comment = new Comment(taskId, authorId, text.Trim());
         await _context.Comments.AddAsync(comment, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        return comment;
     }
 
     public async Task AddAsync(TaskItem task, CancellationToken cancellationToken = default)
     {
-        var projectExists = await _context.Projects.AnyAsync(p => p.Id == task.ProjectId, cancellationToken);
-        if (!projectExists)
-        {
-            throw new NotFoundException($"Project with Id '{task.ProjectId}' does not exist.");
-        }
-
-        if (task.AssigneeId.HasValue)
-        {
-            var assigneeExists = await _context.Users.AnyAsync(u => u.Id == task.AssigneeId.Value, cancellationToken);
-            if (!assigneeExists)
-            {
-                throw new NotFoundException($"Assignee User with Id '{task.AssigneeId.Value}' does not exist.");
-            }
-        }
-
         await _context.Tasks.AddAsync(task, cancellationToken);
     }
 
