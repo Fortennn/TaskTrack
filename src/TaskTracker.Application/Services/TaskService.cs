@@ -73,7 +73,15 @@ public sealed class TaskService : ITaskService
 
     public async Task<TaskDetailDto> CreateForProjectAsync(Guid projectId, CreateTaskRequest request, CancellationToken cancellationToken = default)
     {
-        var taskRequest = request with { ProjectId = projectId };
+        var taskRequest = new CreateTaskRequest
+        {
+            Title = request.Title,
+            ProjectId = projectId,
+            Description = request.Description,
+            Priority = request.Priority,
+            DueDate = request.DueDate,
+            AssigneeId = request.AssigneeId
+        };
         return await CreateAsync(taskRequest, cancellationToken);
     }
 

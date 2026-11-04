@@ -4,10 +4,27 @@ using TaskTracker.Domain.Enums;
 
 namespace TaskTracker.Application.DTOs.Tasks;
 
-public sealed record CreateTaskRequest(
-    [Required, MaxLength(250)] string Title,
-    [Required] Guid ProjectId,
-    [MaxLength(4000)] string? Description = null,
-    Priority Priority = Priority.Medium,
-    [FutureDate] DateTime? DueDate = null,
-    Guid? AssigneeId = null);
+public sealed class CreateTaskRequest
+{
+    /// <summary>Обов’язкова назва задачі.</summary>
+    [Required, MaxLength(250)]
+    public string Title { get; init; } = string.Empty;
+
+    /// <summary>Обов’язковий ідентифікатор проєкту, до якого належить задача.</summary>
+    [Required]
+    public Guid ProjectId { get; init; }
+
+    /// <summary>Необов’язковий детальний опис задачі.</summary>
+    [MaxLength(4000)]
+    public string? Description { get; init; }
+
+    /// <summary>Пріоритет задачі (Low, Medium, High, Critical).</summary>
+    public Priority Priority { get; init; } = Priority.Medium;
+
+    /// <summary>Необов’язковий дедлайн задачі у майбутньому (UTC).</summary>
+    [FutureDate]
+    public DateTime? DueDate { get; init; }
+
+    /// <summary>Необов’язковий ідентифікатор користувача-виконавця.</summary>
+    public Guid? AssigneeId { get; init; }
+}
