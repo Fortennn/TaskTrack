@@ -1,8 +1,10 @@
+using TaskTracker.Application.BackgroundJobs;
 using TaskTracker.Application.Common;
 using TaskTracker.Application.Common.Interfaces;
 using TaskTracker.Application.DTOs;
 using TaskTracker.Application.DTOs.Comments;
 using TaskTracker.Application.DTOs.Tasks;
+using TaskTracker.Application.Interfaces;
 using TaskTracker.Application.Validation;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Exceptions;
@@ -16,19 +18,28 @@ public sealed class TaskService : ITaskService
     private readonly IUserRepository _userRepository;
     private readonly ICoverImageStorage _coverImageStorage;
     private readonly CoverImageUploadValidator _coverImageUploadValidator;
+    private readonly IBackgroundTaskQueue _taskQueue;
+    private readonly IJobStatusStore _jobStatusStore;
+    private readonly ITaskNotificationSender _notificationSender;
 
     public TaskService(
         ITaskRepository taskRepository,
         IProjectRepository projectRepository,
         IUserRepository userRepository,
         ICoverImageStorage coverImageStorage,
-        CoverImageUploadValidator coverImageUploadValidator)
+        CoverImageUploadValidator coverImageUploadValidator,
+        IBackgroundTaskQueue taskQueue,
+        IJobStatusStore jobStatusStore,
+        ITaskNotificationSender notificationSender)
     {
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
         _userRepository = userRepository;
         _coverImageStorage = coverImageStorage;
         _coverImageUploadValidator = coverImageUploadValidator;
+        _taskQueue = taskQueue;
+        _jobStatusStore = jobStatusStore;
+        _notificationSender = notificationSender;
     }
 
     public async Task<TaskDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -47,7 +58,7 @@ public sealed class TaskService : ITaskService
         return await _taskRepository.GetPagedAsync(parameters, cancellationToken);
     }
 
-    public async Task<TaskDetailDto> CreateAsync(CreateTaskRequest request, CancellationToken cancellationToken = default)
+    public async Task<CreateTaskResponse> CreateAsync(CreateTaskRequest request, CancellationToken cancellationToken = default)
     {
         var projectExists = await _projectRepository.ExistsAsync(request.ProjectId, cancellationToken);
         if (!projectExists)
@@ -55,6 +66,7 @@ public sealed class TaskService : ITaskService
             throw new NotFoundException($"Project with Id '{request.ProjectId}' does not exist.");
         }
 
+        User? assignee = null;
         if (request.AssigneeId.HasValue)
         {
             var assigneeExists = await _userRepository.ExistsAsync(request.AssigneeId.Value, cancellationToken);
@@ -62,6 +74,8 @@ public sealed class TaskService : ITaskService
             {
                 throw new NotFoundException($"Assignee User with Id '{request.AssigneeId.Value}' does not exist.");
             }
+
+            assignee = await _userRepository.GetByIdAsync(request.AssigneeId.Value, cancellationToken);
         }
 
         var task = new TaskItem(
@@ -76,10 +90,28 @@ public sealed class TaskService : ITaskService
         await _taskRepository.SaveChangesAsync(cancellationToken);
 
         var createdDto = await _taskRepository.GetDetailByIdAsync(task.Id, cancellationToken);
-        return createdDto!;
+
+        var jobId = _jobStatusStore.CreateJob();
+        var statusStore = _jobStatusStore;
+        var sender = _notificationSender;
+        var taskId = task.Id;
+        var taskTitle = task.Title;
+        var recipientEmail = assignee?.Email;
+
+        await _taskQueue.QueueAsync(stoppingToken =>
+            ProcessNotificationJobAsync(
+                jobId,
+                taskId,
+                taskTitle,
+                recipientEmail,
+                statusStore,
+                sender,
+                stoppingToken));
+
+        return new CreateTaskResponse(createdDto!, jobId);
     }
 
-    public async Task<TaskDetailDto> CreateForProjectAsync(Guid projectId, CreateTaskRequest request, CancellationToken cancellationToken = default)
+    public async Task<CreateTaskResponse> CreateForProjectAsync(Guid projectId, CreateTaskRequest request, CancellationToken cancellationToken = default)
     {
         var taskRequest = new CreateTaskRequest
         {
@@ -91,6 +123,48 @@ public sealed class TaskService : ITaskService
             AssigneeId = request.AssigneeId
         };
         return await CreateAsync(taskRequest, cancellationToken);
+    }
+
+    private static async Task ProcessNotificationJobAsync(
+        Guid jobId,
+        Guid taskId,
+        string taskTitle,
+        string? recipientEmail,
+        IJobStatusStore statusStore,
+        ITaskNotificationSender sender,
+        CancellationToken cancellationToken)
+    {
+        statusStore.SetStatus(
+            jobId,
+            BackgroundJobStatus.Processing);
+
+        try
+        {
+            await sender.SendAsync(
+                taskId,
+                taskTitle,
+                recipientEmail,
+                cancellationToken);
+
+            statusStore.SetStatus(
+                jobId,
+                BackgroundJobStatus.Done);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            statusStore.SetStatus(
+                jobId,
+                BackgroundJobStatus.Cancelled);
+            throw;
+        }
+        catch
+        {
+            statusStore.SetStatus(
+                jobId,
+                BackgroundJobStatus.Failed);
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<CommentDto>> GetCommentsAsync(Guid taskId, CancellationToken cancellationToken = default)

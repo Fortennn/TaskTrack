@@ -5,4 +5,7 @@
     <Project Path="src/TaskTracker.Domain/TaskTracker.Domain.csproj" />
     <Project Path="src/TaskTracker.Infrastructure/TaskTracker.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TaskTracker.UnitTests/TaskTracker.UnitTests.csproj" />
+  </Folder>
 </Solution>

@@ -57,23 +57,23 @@ public sealed class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// Створює нову задачу.
+    /// Створює нову задачу та реєструє фонову задачу для надсилання сповіщення.
     /// </summary>
     /// <param name="request">Дані для створення задачі.</param>
     /// <param name="cancellationToken">Токен скасування операції.</param>
-    /// <response code="201">Задачу успішно створено.</response>
+    /// <response code="201">Задачу успішно створено, повернуто дані задачі та jobId фонової задачі.</response>
     /// <response code="400">Помилка валідації вхідних даних (відсутні обов'язкові поля або дата дедлайну в минулому).</response>
     /// <response code="404">Вказаний проєкт або призначений виконавець не існують.</response>
     [HttpPost]
-    [ProducesResponseType<TaskDetailDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<CreateTaskResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TaskDetailDto>> CreateTask(
+    public async Task<ActionResult<CreateTaskResponse>> CreateTask(
         [FromBody] CreateTaskRequest request, 
         CancellationToken cancellationToken)
     {
-        var createdTask = await _taskService.CreateAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetTaskById), new { id = createdTask.Id }, createdTask);
+        var response = await _taskService.CreateAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(GetTaskById), new { id = response.Task.Id }, response);
     }
 
     /// <summary>

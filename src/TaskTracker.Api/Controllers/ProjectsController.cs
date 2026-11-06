@@ -78,24 +78,24 @@ public sealed class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Створює нову задачу безпосередньо у вказаному проєкті (вкладений ендпоінт).
+    /// Створює нову задачу безпосередньо у вказаному проєкті та ставить у чергу фонову задачу сповіщення.
     /// </summary>
     /// <param name="projectId">Ідентифікатор проєкту, у якому створюється задача.</param>
     /// <param name="request">Дані створюваної задачі.</param>
     /// <param name="cancellationToken">Токен скасування операції.</param>
-    /// <response code="201">Задачу успішно створено всередині проєкту.</response>
+    /// <response code="201">Задачу успішно створено, повернуто дані задачі та jobId фонової задачі.</response>
     /// <response code="400">Помилка валідації вхідних даних задачі.</response>
     /// <response code="404">Проєкт або призначений виконавець не знайдені.</response>
     [HttpPost("{projectId:guid}/tasks")]
-    [ProducesResponseType<TaskDetailDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<CreateTaskResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TaskDetailDto>> CreateProjectTask(
+    public async Task<ActionResult<CreateTaskResponse>> CreateProjectTask(
         Guid projectId, 
         [FromBody] CreateTaskRequest request, 
         CancellationToken cancellationToken)
     {
-        var createdTaskDto = await _taskService.CreateForProjectAsync(projectId, request, cancellationToken);
-        return CreatedAtAction("GetTaskById", "Tasks", new { id = createdTaskDto.Id }, createdTaskDto);
+        var response = await _taskService.CreateForProjectAsync(projectId, request, cancellationToken);
+        return CreatedAtAction("GetTaskById", "Tasks", new { id = response.Task.Id }, response);
     }
 }

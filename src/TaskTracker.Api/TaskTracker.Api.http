@@ -76,13 +76,68 @@ Content-Type: text/plain
 This is a plain text file, not an image!
 --invalid-boundary--
 
-### 3.2 Помилка 404 Not Found: Завантаження обкладинки для неіснуючої задачі
-POST {{Host}}/api/tasks/00000000-0000-0000-0000-000000000000/cover
-Content-Type: multipart/form-data; boundary=tasktracker-boundary
+### ===================================================================
+### 4. АСИНХРОННІСТЬ ТА ФОНОВІ ЗАДАЧІ (ПРАКТИЧНА РОБОТА 9)
+### ===================================================================
 
---tasktracker-boundary
-Content-Disposition: form-data; name="cover"; filename="test-cover.png"
-Content-Type: image/png
+### 4.1 Перевірка працездатності сервісу (Health Checks)
+GET {{Host}}/health
 
-< ./test-cover.png
---tasktracker-boundary--
+### 4.2 Створити нову задачу та поставити фонове сповіщення в чергу
+# @name createAsyncTask
+POST {{Host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Фонове асинхронне завдання з чергою Channel",
+  "projectId": "{{projectId}}",
+  "description": "Перевірка неблокуючого виконання надсилання сповіщення",
+  "priority": "High"
+}
+
+### Зберегти ID створеної фонової задачі
+@jobId = {{createAsyncTask.response.body.jobId}}
+
+### 4.3 Отримати поточний стан фонової задачі (pending -> processing -> done)
+GET {{Host}}/jobs/{{jobId}}
+Accept: application/json
+
+### 4.4 Запит неіснуючого jobId (Очікується 404 Not Found у форматі Problem Details)
+GET {{Host}}/jobs/00000000-0000-0000-0000-000000000001
+Accept: application/problem+json
+
+### 4.5 Самостійне завдання: керована імітація помилки фонової задачі
+# @name createFailingAsyncTask
+POST {{Host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "[fail] Завдання з імітацією збою надсилання",
+  "projectId": "{{projectId}}",
+  "description": "Тестування ізоляції помилок фонового воркера",
+  "priority": "Low"
+}
+
+@failedJobId = {{createFailingAsyncTask.response.body.jobId}}
+
+### 4.6 Перевірити стан задачі зі збоєм (Очікується стан "failed")
+GET {{Host}}/jobs/{{failedJobId}}
+Accept: application/json
+
+### 4.7 Перевірити, що після збою воркер продовжує обробляти наступні задачі в черзі
+# @name createSubsequentAsyncTask
+POST {{Host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Наступна успішна задача після збою",
+  "projectId": "{{projectId}}",
+  "priority": "Medium"
+}
+
+@subsequentJobId = {{createSubsequentAsyncTask.response.body.jobId}}
+
+### 4.8 Стан наступної задачі успішно переходить у "done"
+GET {{Host}}/jobs/{{subsequentJobId}}
+Accept: application/json
+

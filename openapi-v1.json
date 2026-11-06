@@ -1,1275 +1,1390 @@
-{
-  "openapi": "3.0.4",
-  "info": {
-    "title": "TaskTracker API",
-    "description": "Платформа для управління проєктами, задачами та коментарями (Clean Architecture, ASP.NET Core .NET 10)",
-    "version": "v1"
-  },
-  "paths": {
-    "/api/projects": {
-      "get": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Повертає список проєктів з пагінацією та підрахованою кількістю задач (без проблеми N+1).",
-        "parameters": [
-          {
-            "name": "Page",
-            "in": "query",
-            "description": "Номер сторінки, починаючи з одиниці.",
-            "schema": {
-              "maximum": 2147483647,
-              "minimum": 1,
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "PageSize",
-            "in": "query",
-            "description": "Кількість елементів на сторінці; максимальне значення — 100.",
-            "schema": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "Search",
-            "in": "query",
-            "description": "Необов’язковий пошуковий фрагмент для назви проєкту без урахування регістру.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "SortBy",
-            "in": "query",
-            "description": "Поле сортування: name або createdat.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "Order",
-            "in": "query",
-            "description": "Напрям сортування: asc або desc.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Список проєктів успішно отримано.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectDtoPagedResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Помилка валідації параметрів запиту.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Створює новий проєкт з унікальною назвою.",
-        "requestBody": {
-          "description": "Тіло запиту з назвою та описом проєкту.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateProjectRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateProjectRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateProjectRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Проєкт успішно створено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Помилка валідації вхідних даних (відсутня або задовга назва).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Проєкт із такою назвою вже існує в системі.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/projects/{id}": {
-      "get": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Повертає детальну інформацію про проєкт та всі його задачі.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Ідентифікатор проєкту (UUID).",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Проєкт знайдено та успішно повернено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProjectDetailDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Проєкт із зазначеним ідентифікатором не існує.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/projects/{projectId}/tasks": {
-      "post": {
-        "tags": [
-          "Projects"
-        ],
-        "summary": "Створює нову задачу безпосередньо у вказаному проєкті (вкладений ендпоінт).",
-        "parameters": [
-          {
-            "name": "projectId",
-            "in": "path",
-            "description": "Ідентифікатор проєкту, у якому створюється задача.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "Дані створюваної задачі.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Задачу успішно створено всередині проєкту.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskDetailDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Помилка валідації вхідних даних задачі.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Проєкт або призначений виконавець не знайдені.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/tasks": {
-      "get": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Повертає відфільтрований список задач із детермінованим сортуванням та пагінацією.",
-        "parameters": [
-          {
-            "name": "Page",
-            "in": "query",
-            "description": "Номер сторінки, починаючи з одиниці.",
-            "schema": {
-              "maximum": 2147483647,
-              "minimum": 1,
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "PageSize",
-            "in": "query",
-            "description": "Кількість елементів на сторінці; максимальне значення — 100.",
-            "schema": {
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "ProjectId",
-            "in": "query",
-            "description": "Необов’язковий фільтр за ідентифікатором проєкту.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "AssigneeId",
-            "in": "query",
-            "description": "Необов’язковий фільтр за ідентифікатором виконавця.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Status",
-            "in": "query",
-            "description": "Необов’язковий фільтр за статусом задачі (Todo, InProgress, Done).",
-            "schema": {
-              "$ref": "#/components/schemas/TaskStatus"
-            }
-          },
-          {
-            "name": "Priority",
-            "in": "query",
-            "description": "Необов’язковий фільтр за пріоритетом (Low, Medium, High, Critical).",
-            "schema": {
-              "$ref": "#/components/schemas/Priority"
-            }
-          },
-          {
-            "name": "Search",
-            "in": "query",
-            "description": "Необов’язковий пошуковий фрагмент для назви задачі без урахування регістру.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "DueDateFrom",
-            "in": "query",
-            "description": "Необов’язкова нижня межа дедлайну за UTC.",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
-          },
-          {
-            "name": "DueDateTo",
-            "in": "query",
-            "description": "Необов’язкова верхня межа дедлайну за UTC.",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
-          },
-          {
-            "name": "SortBy",
-            "in": "query",
-            "description": "Поле сортування: title, duedate, priority, status, createdat.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "Order",
-            "in": "query",
-            "description": "Напрям сортування: asc або desc.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Успішне отримання сторінки списку задач.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskDtoPagedResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Помилка валідації параметрів запиту (наприклад, DueDateFrom > DueDateTo або некоректні параметри пагінації).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Створює нову задачу.",
-        "requestBody": {
-          "description": "Дані для створення задачі.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTaskRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Задачу успішно створено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskDetailDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Помилка валідації вхідних даних (відсутні обов'язкові поля або дата дедлайну в минулому).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Вказаний проєкт або призначений виконавець не існують.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/tasks/{id}": {
-      "get": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Повертає детальну інформацію про задачу за її ідентифікатором із вкладеними коментарями.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Унікальний глобальний ідентифікатор задачі (UUID).",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Задачу знайдено та успішно повернуто.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskDetailDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Задачу з указаним ідентифікатором не знайдено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/tasks/{id}/cover": {
-      "post": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Завантажує або оновлює зображення-обкладинку для задачі (JPEG або PNG до 5 МБ).",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Ідентифікатор задачі (UUID).",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "cover": {
-                    "type": "string",
-                    "description": "Файл зображення у форматі multipart/form-data.",
-                    "format": "binary"
-                  }
-                }
+﻿{
+    "openapi":  "3.0.4",
+    "info":  {
+                 "title":  "TaskTracker API",
+                 "description":  "Платформа для управління проєктами, задачами та коментарями (Clean Architecture, ASP.NET Core .NET 10)",
+                 "version":  "v1"
+             },
+    "paths":  {
+                  "/jobs/{id}":  {
+                                     "get":  {
+                                                 "tags":  [
+                                                              "Jobs"
+                                                          ],
+                                                 "summary":  "Отримує поточний стан виконання фонової задачі за її jobId.",
+                                                 "parameters":  [
+                                                                    {
+                                                                        "name":  "id",
+                                                                        "in":  "path",
+                                                                        "description":  "Унікальний глобальний ідентифікатор фонової задачі (UUID).",
+                                                                        "required":  true,
+                                                                        "schema":  {
+                                                                                       "type":  "string",
+                                                                                       "format":  "uuid"
+                                                                                   }
+                                                                    }
+                                                                ],
+                                                 "responses":  {
+                                                                   "200":  {
+                                                                               "description":  "Стан фонової задачі (pending, processing, done, failed, cancelled).",
+                                                                               "content":  {
+                                                                                               "application/json":  {
+                                                                                                                        "schema":  {
+                                                                                                                                       "$ref":  "#/components/schemas/JobStatusDto"
+                                                                                                                                   }
+                                                                                                                    }
+                                                                                           }
+                                                                           },
+                                                                   "404":  {
+                                                                               "description":  "Фонову задачу з указаним ідентифікатором не знайдено (Problem Details).",
+                                                                               "content":  {
+                                                                                               "application/json":  {
+                                                                                                                        "schema":  {
+                                                                                                                                       "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                   }
+                                                                                                                    }
+                                                                                           }
+                                                                           }
+                                                               }
+                                             }
+                                 },
+                  "/api/jobs/{id}":  {
+                                         "get":  {
+                                                     "tags":  [
+                                                                  "Jobs"
+                                                              ],
+                                                     "summary":  "Отримує поточний стан виконання фонової задачі за її jobId.",
+                                                     "parameters":  [
+                                                                        {
+                                                                            "name":  "id",
+                                                                            "in":  "path",
+                                                                            "description":  "Унікальний глобальний ідентифікатор фонової задачі (UUID).",
+                                                                            "required":  true,
+                                                                            "schema":  {
+                                                                                           "type":  "string",
+                                                                                           "format":  "uuid"
+                                                                                       }
+                                                                        }
+                                                                    ],
+                                                     "responses":  {
+                                                                       "200":  {
+                                                                                   "description":  "Стан фонової задачі (pending, processing, done, failed, cancelled).",
+                                                                                   "content":  {
+                                                                                                   "application/json":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "$ref":  "#/components/schemas/JobStatusDto"
+                                                                                                                                       }
+                                                                                                                        }
+                                                                                               }
+                                                                               },
+                                                                       "404":  {
+                                                                                   "description":  "Фонову задачу з указаним ідентифікатором не знайдено (Problem Details).",
+                                                                                   "content":  {
+                                                                                                   "application/json":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                       }
+                                                                                                                        }
+                                                                                               }
+                                                                               }
+                                                                   }
+                                                 }
+                                     },
+                  "/api/projects":  {
+                                        "get":  {
+                                                    "tags":  [
+                                                                 "Projects"
+                                                             ],
+                                                    "summary":  "Повертає список проєктів з пагінацією та підрахованою кількістю задач (без проблеми N+1).",
+                                                    "parameters":  [
+                                                                       {
+                                                                           "name":  "Page",
+                                                                           "in":  "query",
+                                                                           "description":  "Номер сторінки, починаючи з одиниці.",
+                                                                           "schema":  {
+                                                                                          "maximum":  2147483647,
+                                                                                          "minimum":  1,
+                                                                                          "type":  "integer",
+                                                                                          "format":  "int32"
+                                                                                      }
+                                                                       },
+                                                                       {
+                                                                           "name":  "PageSize",
+                                                                           "in":  "query",
+                                                                           "description":  "Кількість елементів на сторінці; максимальне значення — 100.",
+                                                                           "schema":  {
+                                                                                          "maximum":  100,
+                                                                                          "minimum":  1,
+                                                                                          "type":  "integer",
+                                                                                          "format":  "int32"
+                                                                                      }
+                                                                       },
+                                                                       {
+                                                                           "name":  "Search",
+                                                                           "in":  "query",
+                                                                           "description":  "Необов’язковий пошуковий фрагмент для назви проєкту без урахування регістру.",
+                                                                           "schema":  {
+                                                                                          "type":  "string"
+                                                                                      }
+                                                                       },
+                                                                       {
+                                                                           "name":  "SortBy",
+                                                                           "in":  "query",
+                                                                           "description":  "Поле сортування: name або createdat.",
+                                                                           "schema":  {
+                                                                                          "type":  "string"
+                                                                                      }
+                                                                       },
+                                                                       {
+                                                                           "name":  "Order",
+                                                                           "in":  "query",
+                                                                           "description":  "Напрям сортування: asc або desc.",
+                                                                           "schema":  {
+                                                                                          "type":  "string"
+                                                                                      }
+                                                                       }
+                                                                   ],
+                                                    "responses":  {
+                                                                      "200":  {
+                                                                                  "description":  "Список проєктів успішно отримано.",
+                                                                                  "content":  {
+                                                                                                  "application/json":  {
+                                                                                                                           "schema":  {
+                                                                                                                                          "$ref":  "#/components/schemas/ProjectDtoPagedResult"
+                                                                                                                                      }
+                                                                                                                       }
+                                                                                              }
+                                                                              },
+                                                                      "400":  {
+                                                                                  "description":  "Помилка валідації параметрів запиту.",
+                                                                                  "content":  {
+                                                                                                  "application/json":  {
+                                                                                                                           "schema":  {
+                                                                                                                                          "$ref":  "#/components/schemas/ValidationProblemDetails"
+                                                                                                                                      }
+                                                                                                                       }
+                                                                                              }
+                                                                              }
+                                                                  }
+                                                },
+                                        "post":  {
+                                                     "tags":  [
+                                                                  "Projects"
+                                                              ],
+                                                     "summary":  "Створює новий проєкт з унікальною назвою.",
+                                                     "requestBody":  {
+                                                                         "description":  "Тіло запиту з назвою та описом проєкту.",
+                                                                         "content":  {
+                                                                                         "application/json":  {
+                                                                                                                  "schema":  {
+                                                                                                                                 "$ref":  "#/components/schemas/CreateProjectRequest"
+                                                                                                                             }
+                                                                                                              },
+                                                                                         "text/json":  {
+                                                                                                           "schema":  {
+                                                                                                                          "$ref":  "#/components/schemas/CreateProjectRequest"
+                                                                                                                      }
+                                                                                                       },
+                                                                                         "application/*+json":  {
+                                                                                                                    "schema":  {
+                                                                                                                                   "$ref":  "#/components/schemas/CreateProjectRequest"
+                                                                                                                               }
+                                                                                                                }
+                                                                                     }
+                                                                     },
+                                                     "responses":  {
+                                                                       "201":  {
+                                                                                   "description":  "Проєкт успішно створено.",
+                                                                                   "content":  {
+                                                                                                   "application/json":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "$ref":  "#/components/schemas/ProjectDto"
+                                                                                                                                       }
+                                                                                                                        }
+                                                                                               }
+                                                                               },
+                                                                       "400":  {
+                                                                                   "description":  "Помилка валідації вхідних даних (відсутня або задовга назва).",
+                                                                                   "content":  {
+                                                                                                   "application/json":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "$ref":  "#/components/schemas/ValidationProblemDetails"
+                                                                                                                                       }
+                                                                                                                        }
+                                                                                               }
+                                                                               },
+                                                                       "409":  {
+                                                                                   "description":  "Проєкт із такою назвою вже існує в системі.",
+                                                                                   "content":  {
+                                                                                                   "application/json":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                       }
+                                                                                                                        }
+                                                                                               }
+                                                                               }
+                                                                   }
+                                                 }
+                                    },
+                  "/api/projects/{id}":  {
+                                             "get":  {
+                                                         "tags":  [
+                                                                      "Projects"
+                                                                  ],
+                                                         "summary":  "Повертає детальну інформацію про проєкт та всі його задачі.",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "name":  "id",
+                                                                                "in":  "path",
+                                                                                "description":  "Ідентифікатор проєкту (UUID).",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "string",
+                                                                                               "format":  "uuid"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Проєкт знайдено та успішно повернено.",
+                                                                                       "content":  {
+                                                                                                       "application/json":  {
+                                                                                                                                "schema":  {
+                                                                                                                                               "$ref":  "#/components/schemas/ProjectDetailDto"
+                                                                                                                                           }
+                                                                                                                            }
+                                                                                                   }
+                                                                                   },
+                                                                           "404":  {
+                                                                                       "description":  "Проєкт із зазначеним ідентифікатором не існує.",
+                                                                                       "content":  {
+                                                                                                       "application/json":  {
+                                                                                                                                "schema":  {
+                                                                                                                                               "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                           }
+                                                                                                                            }
+                                                                                                   }
+                                                                                   }
+                                                                       }
+                                                     }
+                                         },
+                  "/api/projects/{projectId}/tasks":  {
+                                                          "post":  {
+                                                                       "tags":  [
+                                                                                    "Projects"
+                                                                                ],
+                                                                       "summary":  "Створює нову задачу безпосередньо у вказаному проєкті та ставить у чергу фонову задачу сповіщення.",
+                                                                       "parameters":  [
+                                                                                          {
+                                                                                              "name":  "projectId",
+                                                                                              "in":  "path",
+                                                                                              "description":  "Ідентифікатор проєкту, у якому створюється задача.",
+                                                                                              "required":  true,
+                                                                                              "schema":  {
+                                                                                                             "type":  "string",
+                                                                                                             "format":  "uuid"
+                                                                                                         }
+                                                                                          }
+                                                                                      ],
+                                                                       "requestBody":  {
+                                                                                           "description":  "Дані створюваної задачі.",
+                                                                                           "content":  {
+                                                                                                           "application/json":  {
+                                                                                                                                    "schema":  {
+                                                                                                                                                   "$ref":  "#/components/schemas/CreateTaskRequest"
+                                                                                                                                               }
+                                                                                                                                },
+                                                                                                           "text/json":  {
+                                                                                                                             "schema":  {
+                                                                                                                                            "$ref":  "#/components/schemas/CreateTaskRequest"
+                                                                                                                                        }
+                                                                                                                         },
+                                                                                                           "application/*+json":  {
+                                                                                                                                      "schema":  {
+                                                                                                                                                     "$ref":  "#/components/schemas/CreateTaskRequest"
+                                                                                                                                                 }
+                                                                                                                                  }
+                                                                                                       }
+                                                                                       },
+                                                                       "responses":  {
+                                                                                         "201":  {
+                                                                                                     "description":  "Задачу успішно створено, повернуто дані задачі та jobId фонової задачі.",
+                                                                                                     "content":  {
+                                                                                                                     "application/json":  {
+                                                                                                                                              "schema":  {
+                                                                                                                                                             "$ref":  "#/components/schemas/CreateTaskResponse"
+                                                                                                                                                         }
+                                                                                                                                          }
+                                                                                                                 }
+                                                                                                 },
+                                                                                         "400":  {
+                                                                                                     "description":  "Помилка валідації вхідних даних задачі.",
+                                                                                                     "content":  {
+                                                                                                                     "application/json":  {
+                                                                                                                                              "schema":  {
+                                                                                                                                                             "$ref":  "#/components/schemas/ValidationProblemDetails"
+                                                                                                                                                         }
+                                                                                                                                          }
+                                                                                                                 }
+                                                                                                 },
+                                                                                         "404":  {
+                                                                                                     "description":  "Проєкт або призначений виконавець не знайдені.",
+                                                                                                     "content":  {
+                                                                                                                     "application/json":  {
+                                                                                                                                              "schema":  {
+                                                                                                                                                             "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                                         }
+                                                                                                                                          }
+                                                                                                                 }
+                                                                                                 }
+                                                                                     }
+                                                                   }
+                                                      },
+                  "/api/tasks":  {
+                                     "get":  {
+                                                 "tags":  [
+                                                              "Tasks"
+                                                          ],
+                                                 "summary":  "Повертає відфільтрований список задач із детермінованим сортуванням та пагінацією.",
+                                                 "parameters":  [
+                                                                    {
+                                                                        "name":  "Page",
+                                                                        "in":  "query",
+                                                                        "description":  "Номер сторінки, починаючи з одиниці.",
+                                                                        "schema":  {
+                                                                                       "maximum":  2147483647,
+                                                                                       "minimum":  1,
+                                                                                       "type":  "integer",
+                                                                                       "format":  "int32"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "PageSize",
+                                                                        "in":  "query",
+                                                                        "description":  "Кількість елементів на сторінці; максимальне значення — 100.",
+                                                                        "schema":  {
+                                                                                       "maximum":  100,
+                                                                                       "minimum":  1,
+                                                                                       "type":  "integer",
+                                                                                       "format":  "int32"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "ProjectId",
+                                                                        "in":  "query",
+                                                                        "description":  "Необов’язковий фільтр за ідентифікатором проєкту.",
+                                                                        "schema":  {
+                                                                                       "type":  "string",
+                                                                                       "format":  "uuid"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "AssigneeId",
+                                                                        "in":  "query",
+                                                                        "description":  "Необов’язковий фільтр за ідентифікатором виконавця.",
+                                                                        "schema":  {
+                                                                                       "type":  "string",
+                                                                                       "format":  "uuid"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "Status",
+                                                                        "in":  "query",
+                                                                        "description":  "Необов’язковий фільтр за статусом задачі (Todo, InProgress, Done).",
+                                                                        "schema":  {
+                                                                                       "$ref":  "#/components/schemas/TaskStatus"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "Priority",
+                                                                        "in":  "query",
+                                                                        "description":  "Необов’язковий фільтр за пріоритетом (Low, Medium, High, Critical).",
+                                                                        "schema":  {
+                                                                                       "$ref":  "#/components/schemas/Priority"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "Search",
+                                                                        "in":  "query",
+                                                                        "description":  "Необов’язковий пошуковий фрагмент для назви задачі без урахування регістру.",
+                                                                        "schema":  {
+                                                                                       "type":  "string"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "DueDateFrom",
+                                                                        "in":  "query",
+                                                                        "description":  "Необов’язкова нижня межа дедлайну за UTC.",
+                                                                        "schema":  {
+                                                                                       "type":  "string",
+                                                                                       "format":  "date"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "DueDateTo",
+                                                                        "in":  "query",
+                                                                        "description":  "Необов’язкова верхня межа дедлайну за UTC.",
+                                                                        "schema":  {
+                                                                                       "type":  "string",
+                                                                                       "format":  "date"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "SortBy",
+                                                                        "in":  "query",
+                                                                        "description":  "Поле сортування: title, duedate, priority, status, createdat.",
+                                                                        "schema":  {
+                                                                                       "type":  "string"
+                                                                                   }
+                                                                    },
+                                                                    {
+                                                                        "name":  "Order",
+                                                                        "in":  "query",
+                                                                        "description":  "Напрям сортування: asc або desc.",
+                                                                        "schema":  {
+                                                                                       "type":  "string"
+                                                                                   }
+                                                                    }
+                                                                ],
+                                                 "responses":  {
+                                                                   "200":  {
+                                                                               "description":  "Успішне отримання сторінки списку задач.",
+                                                                               "content":  {
+                                                                                               "application/json":  {
+                                                                                                                        "schema":  {
+                                                                                                                                       "$ref":  "#/components/schemas/TaskDtoPagedResult"
+                                                                                                                                   }
+                                                                                                                    }
+                                                                                           }
+                                                                           },
+                                                                   "400":  {
+                                                                               "description":  "Помилка валідації параметрів запиту (наприклад, DueDateFrom \u003e DueDateTo або некоректні параметри пагінації).",
+                                                                               "content":  {
+                                                                                               "application/json":  {
+                                                                                                                        "schema":  {
+                                                                                                                                       "$ref":  "#/components/schemas/ValidationProblemDetails"
+                                                                                                                                   }
+                                                                                                                    }
+                                                                                           }
+                                                                           }
+                                                               }
+                                             },
+                                     "post":  {
+                                                  "tags":  [
+                                                               "Tasks"
+                                                           ],
+                                                  "summary":  "Створює нову задачу та реєструє фонову задачу для надсилання сповіщення.",
+                                                  "requestBody":  {
+                                                                      "description":  "Дані для створення задачі.",
+                                                                      "content":  {
+                                                                                      "application/json":  {
+                                                                                                               "schema":  {
+                                                                                                                              "$ref":  "#/components/schemas/CreateTaskRequest"
+                                                                                                                          }
+                                                                                                           },
+                                                                                      "text/json":  {
+                                                                                                        "schema":  {
+                                                                                                                       "$ref":  "#/components/schemas/CreateTaskRequest"
+                                                                                                                   }
+                                                                                                    },
+                                                                                      "application/*+json":  {
+                                                                                                                 "schema":  {
+                                                                                                                                "$ref":  "#/components/schemas/CreateTaskRequest"
+                                                                                                                            }
+                                                                                                             }
+                                                                                  }
+                                                                  },
+                                                  "responses":  {
+                                                                    "201":  {
+                                                                                "description":  "Задачу успішно створено, повернуто дані задачі та jobId фонової задачі.",
+                                                                                "content":  {
+                                                                                                "application/json":  {
+                                                                                                                         "schema":  {
+                                                                                                                                        "$ref":  "#/components/schemas/CreateTaskResponse"
+                                                                                                                                    }
+                                                                                                                     }
+                                                                                            }
+                                                                            },
+                                                                    "400":  {
+                                                                                "description":  "Помилка валідації вхідних даних (відсутні обов\u0027язкові поля або дата дедлайну в минулому).",
+                                                                                "content":  {
+                                                                                                "application/json":  {
+                                                                                                                         "schema":  {
+                                                                                                                                        "$ref":  "#/components/schemas/ValidationProblemDetails"
+                                                                                                                                    }
+                                                                                                                     }
+                                                                                            }
+                                                                            },
+                                                                    "404":  {
+                                                                                "description":  "Вказаний проєкт або призначений виконавець не існують.",
+                                                                                "content":  {
+                                                                                                "application/json":  {
+                                                                                                                         "schema":  {
+                                                                                                                                        "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                    }
+                                                                                                                     }
+                                                                                            }
+                                                                            }
+                                                                }
+                                              }
+                                 },
+                  "/api/tasks/{id}":  {
+                                          "get":  {
+                                                      "tags":  [
+                                                                   "Tasks"
+                                                               ],
+                                                      "summary":  "Повертає детальну інформацію про задачу за її ідентифікатором із вкладеними коментарями.",
+                                                      "parameters":  [
+                                                                         {
+                                                                             "name":  "id",
+                                                                             "in":  "path",
+                                                                             "description":  "Унікальний глобальний ідентифікатор задачі (UUID).",
+                                                                             "required":  true,
+                                                                             "schema":  {
+                                                                                            "type":  "string",
+                                                                                            "format":  "uuid"
+                                                                                        }
+                                                                         }
+                                                                     ],
+                                                      "responses":  {
+                                                                        "200":  {
+                                                                                    "description":  "Задачу знайдено та успішно повернуто.",
+                                                                                    "content":  {
+                                                                                                    "application/json":  {
+                                                                                                                             "schema":  {
+                                                                                                                                            "$ref":  "#/components/schemas/TaskDetailDto"
+                                                                                                                                        }
+                                                                                                                         }
+                                                                                                }
+                                                                                },
+                                                                        "404":  {
+                                                                                    "description":  "Задачу з указаним ідентифікатором не знайдено.",
+                                                                                    "content":  {
+                                                                                                    "application/json":  {
+                                                                                                                             "schema":  {
+                                                                                                                                            "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                        }
+                                                                                                                         }
+                                                                                                }
+                                                                                }
+                                                                    }
+                                                  }
+                                      },
+                  "/api/tasks/{id}/cover":  {
+                                                "post":  {
+                                                             "tags":  [
+                                                                          "Tasks"
+                                                                      ],
+                                                             "summary":  "Завантажує або оновлює зображення-обкладинку для задачі (JPEG або PNG до 5 МБ).",
+                                                             "parameters":  [
+                                                                                {
+                                                                                    "name":  "id",
+                                                                                    "in":  "path",
+                                                                                    "description":  "Ідентифікатор задачі (UUID).",
+                                                                                    "required":  true,
+                                                                                    "schema":  {
+                                                                                                   "type":  "string",
+                                                                                                   "format":  "uuid"
+                                                                                               }
+                                                                                }
+                                                                            ],
+                                                             "requestBody":  {
+                                                                                 "content":  {
+                                                                                                 "multipart/form-data":  {
+                                                                                                                             "schema":  {
+                                                                                                                                            "type":  "object",
+                                                                                                                                            "properties":  {
+                                                                                                                                                               "cover":  {
+                                                                                                                                                                             "type":  "string",
+                                                                                                                                                                             "description":  "Файл зображення у форматі multipart/form-data.",
+                                                                                                                                                                             "format":  "binary"
+                                                                                                                                                                         }
+                                                                                                                                                           }
+                                                                                                                                        },
+                                                                                                                             "encoding":  {
+                                                                                                                                              "cover":  {
+                                                                                                                                                            "style":  "form"
+                                                                                                                                                        }
+                                                                                                                                          }
+                                                                                                                         }
+                                                                                             }
+                                                                             },
+                                                             "responses":  {
+                                                                               "200":  {
+                                                                                           "description":  "Обкладинку успішно завантажено, повернуто оновлену задачу з посиланням на обкладинку.",
+                                                                                           "content":  {
+                                                                                                           "application/json":  {
+                                                                                                                                    "schema":  {
+                                                                                                                                                   "$ref":  "#/components/schemas/TaskDetailDto"
+                                                                                                                                               }
+                                                                                                                                }
+                                                                                                       }
+                                                                                       },
+                                                                               "400":  {
+                                                                                           "description":  "Некоректний файл (порожній, непідтримуваний формат або перевищено 5 МБ).",
+                                                                                           "content":  {
+                                                                                                           "application/json":  {
+                                                                                                                                    "schema":  {
+                                                                                                                                                   "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                               }
+                                                                                                                                }
+                                                                                                       }
+                                                                                       },
+                                                                               "404":  {
+                                                                                           "description":  "Задачу не знайдено.",
+                                                                                           "content":  {
+                                                                                                           "application/json":  {
+                                                                                                                                    "schema":  {
+                                                                                                                                                   "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                               }
+                                                                                                                                }
+                                                                                                       }
+                                                                                       }
+                                                                           }
+                                                         },
+                                                "get":  {
+                                                            "tags":  [
+                                                                         "Tasks"
+                                                                     ],
+                                                            "summary":  "Отримує бінарний вміст зображення обкладинки задачі.",
+                                                            "parameters":  [
+                                                                               {
+                                                                                   "name":  "id",
+                                                                                   "in":  "path",
+                                                                                   "description":  "Ідентифікатор задачі.",
+                                                                                   "required":  true,
+                                                                                   "schema":  {
+                                                                                                  "type":  "string",
+                                                                                                  "format":  "uuid"
+                                                                                              }
+                                                                               }
+                                                                           ],
+                                                            "responses":  {
+                                                                              "200":  {
+                                                                                          "description":  "Файл знайдено та повернуто у відповіді.",
+                                                                                          "content":  {
+                                                                                                          "image/jpeg":  {
+                                                                                                                             "schema":  {
+                                                                                                                                            "type":  "string",
+                                                                                                                                            "format":  "binary"
+                                                                                                                                        }
+                                                                                                                         },
+                                                                                                          "image/png":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "type":  "string",
+                                                                                                                                           "format":  "binary"
+                                                                                                                                       }
+                                                                                                                        },
+                                                                                                          "application/json":  {
+                                                                                                                                   "schema":  {
+                                                                                                                                                  "type":  "string",
+                                                                                                                                                  "format":  "binary"
+                                                                                                                                              }
+                                                                                                                               }
+                                                                                                      }
+                                                                                      },
+                                                                              "404":  {
+                                                                                          "description":  "Задачу або обкладинку не знайдено.",
+                                                                                          "content":  {
+                                                                                                          "image/jpeg":  {
+                                                                                                                             "schema":  {
+                                                                                                                                            "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                        }
+                                                                                                                         },
+                                                                                                          "image/png":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                       }
+                                                                                                                        },
+                                                                                                          "application/json":  {
+                                                                                                                                   "schema":  {
+                                                                                                                                                  "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                              }
+                                                                                                                               }
+                                                                                                      }
+                                                                                      }
+                                                                          }
+                                                        },
+                                                "delete":  {
+                                                               "tags":  [
+                                                                            "Tasks"
+                                                                        ],
+                                                               "summary":  "Видаляє зображення обкладинки задачі.",
+                                                               "parameters":  [
+                                                                                  {
+                                                                                      "name":  "id",
+                                                                                      "in":  "path",
+                                                                                      "description":  "Ідентифікатор задачі.",
+                                                                                      "required":  true,
+                                                                                      "schema":  {
+                                                                                                     "type":  "string",
+                                                                                                     "format":  "uuid"
+                                                                                                 }
+                                                                                  }
+                                                                              ],
+                                                               "responses":  {
+                                                                                 "204":  {
+                                                                                             "description":  "Обкладинку успішно видалено."
+                                                                                         },
+                                                                                 "404":  {
+                                                                                             "description":  "Задачу не знайдено.",
+                                                                                             "content":  {
+                                                                                                             "application/json":  {
+                                                                                                                                      "schema":  {
+                                                                                                                                                     "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                                 }
+                                                                                                                                  }
+                                                                                                         }
+                                                                                         }
+                                                                             }
+                                                           }
+                                            },
+                  "/api/tasks/{taskId}/comments":  {
+                                                       "get":  {
+                                                                   "tags":  [
+                                                                                "Tasks"
+                                                                            ],
+                                                                   "summary":  "Повертає впорядкований список усіх коментарів конкретної задачі.",
+                                                                   "parameters":  [
+                                                                                      {
+                                                                                          "name":  "taskId",
+                                                                                          "in":  "path",
+                                                                                          "description":  "Ідентифікатор задачі, коментарі якої запитуються.",
+                                                                                          "required":  true,
+                                                                                          "schema":  {
+                                                                                                         "type":  "string",
+                                                                                                         "format":  "uuid"
+                                                                                                     }
+                                                                                      }
+                                                                                  ],
+                                                                   "responses":  {
+                                                                                     "200":  {
+                                                                                                 "description":  "Список коментарів успішно отримано.",
+                                                                                                 "content":  {
+                                                                                                                 "application/json":  {
+                                                                                                                                          "schema":  {
+                                                                                                                                                         "type":  "array",
+                                                                                                                                                         "items":  {
+                                                                                                                                                                       "$ref":  "#/components/schemas/CommentDto"
+                                                                                                                                                                   }
+                                                                                                                                                     }
+                                                                                                                                      }
+                                                                                                             }
+                                                                                             },
+                                                                                     "404":  {
+                                                                                                 "description":  "Задачу з указаним ідентифікатором не знайдено.",
+                                                                                                 "content":  {
+                                                                                                                 "application/json":  {
+                                                                                                                                          "schema":  {
+                                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                                     }
+                                                                                                                                      }
+                                                                                                             }
+                                                                                             }
+                                                                                 }
+                                                               },
+                                                       "post":  {
+                                                                    "tags":  [
+                                                                                 "Tasks"
+                                                                             ],
+                                                                    "summary":  "Додає новий коментар до задачі (вкладений ендпоінт).",
+                                                                    "parameters":  [
+                                                                                       {
+                                                                                           "name":  "taskId",
+                                                                                           "in":  "path",
+                                                                                           "description":  "Ідентифікатор задачі, до якої додається коментар.",
+                                                                                           "required":  true,
+                                                                                           "schema":  {
+                                                                                                          "type":  "string",
+                                                                                                          "format":  "uuid"
+                                                                                                      }
+                                                                                       }
+                                                                                   ],
+                                                                    "requestBody":  {
+                                                                                        "description":  "Тіло запиту з ідентифікатором автора та текстом коментаря.",
+                                                                                        "content":  {
+                                                                                                        "application/json":  {
+                                                                                                                                 "schema":  {
+                                                                                                                                                "$ref":  "#/components/schemas/CreateCommentRequest"
+                                                                                                                                            }
+                                                                                                                             },
+                                                                                                        "text/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/CreateCommentRequest"
+                                                                                                                                     }
+                                                                                                                      },
+                                                                                                        "application/*+json":  {
+                                                                                                                                   "schema":  {
+                                                                                                                                                  "$ref":  "#/components/schemas/CreateCommentRequest"
+                                                                                                                                              }
+                                                                                                                               }
+                                                                                                    }
+                                                                                    },
+                                                                    "responses":  {
+                                                                                      "201":  {
+                                                                                                  "description":  "Коментар успішно створено та додано до задачі.",
+                                                                                                  "content":  {
+                                                                                                                  "application/json":  {
+                                                                                                                                           "schema":  {
+                                                                                                                                                          "$ref":  "#/components/schemas/CommentDto"
+                                                                                                                                                      }
+                                                                                                                                       }
+                                                                                                              }
+                                                                                              },
+                                                                                      "400":  {
+                                                                                                  "description":  "Помилка валідації даних коментаря (порожній або задовгий текст).",
+                                                                                                  "content":  {
+                                                                                                                  "application/json":  {
+                                                                                                                                           "schema":  {
+                                                                                                                                                          "$ref":  "#/components/schemas/ValidationProblemDetails"
+                                                                                                                                                      }
+                                                                                                                                       }
+                                                                                                              }
+                                                                                              },
+                                                                                      "404":  {
+                                                                                                  "description":  "Задачу або вказаного автора коментаря не знайдено.",
+                                                                                                  "content":  {
+                                                                                                                  "application/json":  {
+                                                                                                                                           "schema":  {
+                                                                                                                                                          "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                                      }
+                                                                                                                                       }
+                                                                                                              }
+                                                                                              }
+                                                                                  }
+                                                                }
+                                                   },
+                  "/":  {
+                            "get":  {
+                                        "tags":  [
+                                                     "TaskTracker.Api"
+                                                 ],
+                                        "responses":  {
+                                                          "200":  {
+                                                                      "description":  "OK"
+                                                                  }
+                                                      }
+                                    }
+                        }
               },
-              "encoding": {
-                "cover": {
-                  "style": "form"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Обкладинку успішно завантажено, повернуто оновлену задачу з посиланням на обкладинку.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskDetailDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Некоректний файл (порожній, непідтримуваний формат або перевищено 5 МБ).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Задачу не знайдено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Отримує бінарний вміст зображення обкладинки задачі.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Ідентифікатор задачі.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Файл знайдено та повернуто у відповіді.",
-            "content": {
-              "image/jpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/png": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Задачу або обкладинку не знайдено.",
-            "content": {
-              "image/jpeg": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "image/png": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Видаляє зображення обкладинки задачі.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Ідентифікатор задачі.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Обкладинку успішно видалено."
-          },
-          "404": {
-            "description": "Задачу не знайдено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/tasks/{taskId}/comments": {
-      "get": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Повертає впорядкований список усіх коментарів конкретної задачі.",
-        "parameters": [
-          {
-            "name": "taskId",
-            "in": "path",
-            "description": "Ідентифікатор задачі, коментарі якої запитуються.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Список коментарів успішно отримано.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CommentDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Задачу з указаним ідентифікатором не знайдено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Tasks"
-        ],
-        "summary": "Додає новий коментар до задачі (вкладений ендпоінт).",
-        "parameters": [
-          {
-            "name": "taskId",
-            "in": "path",
-            "description": "Ідентифікатор задачі, до якої додається коментар.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "Тіло запиту з ідентифікатором автора та текстом коментаря.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCommentRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCommentRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCommentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Коментар успішно створено та додано до задачі.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommentDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Помилка валідації даних коментаря (порожній або задовгий текст).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Задачу або вказаного автора коментаря не знайдено.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/": {
-      "get": {
-        "tags": [
-          "TaskTracker.Api"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "CommentDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Унікальний ідентифікатор коментаря.",
-            "format": "uuid"
-          },
-          "taskId": {
-            "type": "string",
-            "description": "Ідентифікатор задачі, до якої належить коментар.",
-            "format": "uuid"
-          },
-          "authorId": {
-            "type": "string",
-            "description": "Ідентифікатор автора коментаря.",
-            "format": "uuid"
-          },
-          "authorName": {
-            "type": "string",
-            "description": "Ім'я автора коментаря.",
-            "nullable": true
-          },
-          "text": {
-            "type": "string",
-            "description": "Текст коментаря.",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "Дата та час публікації коментаря (UTC).",
-            "format": "date-time"
-          }
-        },
-        "additionalProperties": false,
-        "description": "Інформація про коментар до задачі."
-      },
-      "CreateCommentRequest": {
-        "required": [
-          "authorId",
-          "text"
-        ],
-        "type": "object",
-        "properties": {
-          "authorId": {
-            "type": "string",
-            "description": "Обов’язковий ідентифікатор автора коментаря.",
-            "format": "uuid"
-          },
-          "text": {
-            "maxLength": 2000,
-            "minLength": 1,
-            "type": "string",
-            "description": "Обов’язковий текст коментаря."
-          }
-        },
-        "additionalProperties": false
-      },
-      "CreateProjectRequest": {
-        "required": [
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 200,
-            "minLength": 1,
-            "type": "string",
-            "description": "Обов’язкова унікальна назва проєкту."
-          },
-          "description": {
-            "maxLength": 1000,
-            "type": "string",
-            "description": "Необов’язковий опис проєкту.",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "CreateTaskRequest": {
-        "required": [
-          "projectId",
-          "title"
-        ],
-        "type": "object",
-        "properties": {
-          "title": {
-            "maxLength": 250,
-            "minLength": 1,
-            "type": "string",
-            "description": "Обов’язкова назва задачі."
-          },
-          "projectId": {
-            "type": "string",
-            "description": "Обов’язковий ідентифікатор проєкту, до якого належить задача.",
-            "format": "uuid"
-          },
-          "description": {
-            "maxLength": 4000,
-            "type": "string",
-            "description": "Необов’язковий детальний опис задачі.",
-            "nullable": true
-          },
-          "priority": {
-            "$ref": "#/components/schemas/Priority"
-          },
-          "dueDate": {
-            "type": "string",
-            "description": "Необов’язковий дедлайн задачі у майбутньому (UTC).",
-            "format": "date-time",
-            "nullable": true
-          },
-          "assigneeId": {
-            "type": "string",
-            "description": "Необов’язковий ідентифікатор користувача-виконавця.",
-            "format": "uuid",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "Priority": {
-        "enum": [
-          0,
-          1,
-          2,
-          3
-        ],
-        "type": "integer",
-        "format": "int32"
-      },
-      "ProblemDetails": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "nullable": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "instance": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "additionalProperties": { }
-      },
-      "ProjectDetailDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Унікальний ідентифікатор проєкту.",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "description": "Унікальна назва проєкту.",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "description": "Опис проєкту.",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "Дата створення проєкту (UTC).",
-            "format": "date-time"
-          },
-          "tasks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TaskDto"
-            },
-            "description": "Впорядкований перелік задач проєкту.",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false,
-        "description": "Детальна інформація про проєкт із переліком задач."
-      },
-      "ProjectDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Унікальний ідентифікатор проєкту.",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "description": "Унікальна назва проєкту.",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "description": "Опис проєкту.",
-            "nullable": true
-          },
-          "tasksCount": {
-            "type": "integer",
-            "description": "Загальна кількість задач у проєкті.",
-            "format": "int32"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "Дата та час створення проєкту (UTC).",
-            "format": "date-time"
-          }
-        },
-        "additionalProperties": false,
-        "description": "Стисла інформація про проєкт для списку."
-      },
-      "ProjectDtoPagedResult": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProjectDto"
-            },
-            "description": "Колекція елементів поточної сторінки.",
-            "nullable": true
-          },
-          "totalCount": {
-            "type": "integer",
-            "description": "Загальна кількість елементів, що відповідають фільтрам.",
-            "format": "int32"
-          },
-          "page": {
-            "type": "integer",
-            "description": "Номер поточної сторінки (починаючи з 1).",
-            "format": "int32"
-          },
-          "pageSize": {
-            "type": "integer",
-            "description": "Кількість елементів на сторінці.",
-            "format": "int32"
-          }
-        },
-        "additionalProperties": false,
-        "description": "Узагальнений результат запиту з пагінацією."
-      },
-      "TaskDetailDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Унікальний ідентифікатор задачі.",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string",
-            "description": "Назва задачі.",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "description": "Детальний опис задачі.",
-            "nullable": true
-          },
-          "status": {
-            "$ref": "#/components/schemas/TaskStatus"
-          },
-          "priority": {
-            "$ref": "#/components/schemas/Priority"
-          },
-          "dueDate": {
-            "type": "string",
-            "description": "Дедлайн задачі (UTC).",
-            "format": "date-time",
-            "nullable": true
-          },
-          "coverImageUrl": {
-            "type": "string",
-            "description": "Публічний відносний URL обкладинки задачі або null.",
-            "nullable": true
-          },
-          "projectId": {
-            "type": "string",
-            "description": "Ідентифікатор проєкту.",
-            "format": "uuid"
-          },
-          "projectName": {
-            "type": "string",
-            "description": "Назва проєкту.",
-            "nullable": true
-          },
-          "assigneeId": {
-            "type": "string",
-            "description": "Ідентифікатор призначеного виконавця.",
-            "format": "uuid",
-            "nullable": true
-          },
-          "assigneeName": {
-            "type": "string",
-            "description": "Ім'я виконавця.",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "Дата створення задачі (UTC).",
-            "format": "date-time"
-          },
-          "comments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CommentDto"
-            },
-            "description": "Впорядкований за спаданням дати список коментарів.",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false,
-        "description": "Детальна інформація про задачу із вкладеною колекцією коментарів та обкладинкою."
-      },
-      "TaskDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Унікальний ідентифікатор задачі.",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string",
-            "description": "Назва задачі.",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "description": "Необов’язковий опис задачі.",
-            "nullable": true
-          },
-          "status": {
-            "$ref": "#/components/schemas/TaskStatus"
-          },
-          "priority": {
-            "$ref": "#/components/schemas/Priority"
-          },
-          "dueDate": {
-            "type": "string",
-            "description": "Дедлайн задачі (UTC).",
-            "format": "date-time",
-            "nullable": true
-          },
-          "coverImageUrl": {
-            "type": "string",
-            "description": "Публічний відносний URL обкладинки задачі або null.",
-            "nullable": true
-          },
-          "projectId": {
-            "type": "string",
-            "description": "Ідентифікатор проєкту, до якого належить задача.",
-            "format": "uuid"
-          },
-          "projectName": {
-            "type": "string",
-            "description": "Назва проєкту.",
-            "nullable": true
-          },
-          "assigneeId": {
-            "type": "string",
-            "description": "Необов’язковий ідентифікатор виконавця.",
-            "format": "uuid",
-            "nullable": true
-          },
-          "assigneeName": {
-            "type": "string",
-            "description": "Ім'я виконавця.",
-            "nullable": true
-          },
-          "commentsCount": {
-            "type": "integer",
-            "description": "Загальна кількість коментарів до задачі.",
-            "format": "int32"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "Дата та час створення задачі (UTC).",
-            "format": "date-time"
-          }
-        },
-        "additionalProperties": false,
-        "description": "Стисла інформація про задачу для списку."
-      },
-      "TaskDtoPagedResult": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TaskDto"
-            },
-            "description": "Колекція елементів поточної сторінки.",
-            "nullable": true
-          },
-          "totalCount": {
-            "type": "integer",
-            "description": "Загальна кількість елементів, що відповідають фільтрам.",
-            "format": "int32"
-          },
-          "page": {
-            "type": "integer",
-            "description": "Номер поточної сторінки (починаючи з 1).",
-            "format": "int32"
-          },
-          "pageSize": {
-            "type": "integer",
-            "description": "Кількість елементів на сторінці.",
-            "format": "int32"
-          }
-        },
-        "additionalProperties": false,
-        "description": "Узагальнений результат запиту з пагінацією."
-      },
-      "TaskStatus": {
-        "enum": [
-          0,
-          1,
-          2
-        ],
-        "type": "integer",
-        "format": "int32"
-      },
-      "ValidationProblemDetails": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "nullable": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "instance": {
-            "type": "string",
-            "nullable": true
-          },
-          "errors": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": { }
-      }
-    }
-  },
-  "tags": [
-    {
-      "name": "Projects"
-    },
-    {
-      "name": "Tasks"
-    },
-    {
-      "name": "TaskTracker.Api"
-    }
-  ]
+    "components":  {
+                       "schemas":  {
+                                       "CommentDto":  {
+                                                          "type":  "object",
+                                                          "properties":  {
+                                                                             "id":  {
+                                                                                        "type":  "string",
+                                                                                        "description":  "Унікальний ідентифікатор коментаря.",
+                                                                                        "format":  "uuid"
+                                                                                    },
+                                                                             "taskId":  {
+                                                                                            "type":  "string",
+                                                                                            "description":  "Ідентифікатор задачі, до якої належить коментар.",
+                                                                                            "format":  "uuid"
+                                                                                        },
+                                                                             "authorId":  {
+                                                                                              "type":  "string",
+                                                                                              "description":  "Ідентифікатор автора коментаря.",
+                                                                                              "format":  "uuid"
+                                                                                          },
+                                                                             "authorName":  {
+                                                                                                "type":  "string",
+                                                                                                "description":  "Ім\u0027я автора коментаря.",
+                                                                                                "nullable":  true
+                                                                                            },
+                                                                             "text":  {
+                                                                                          "type":  "string",
+                                                                                          "description":  "Текст коментаря.",
+                                                                                          "nullable":  true
+                                                                                      },
+                                                                             "createdAt":  {
+                                                                                               "type":  "string",
+                                                                                               "description":  "Дата та час публікації коментаря (UTC).",
+                                                                                               "format":  "date-time"
+                                                                                           }
+                                                                         },
+                                                          "additionalProperties":  false,
+                                                          "description":  "Інформація про коментар до задачі."
+                                                      },
+                                       "CreateCommentRequest":  {
+                                                                    "required":  [
+                                                                                     "authorId",
+                                                                                     "text"
+                                                                                 ],
+                                                                    "type":  "object",
+                                                                    "properties":  {
+                                                                                       "authorId":  {
+                                                                                                        "type":  "string",
+                                                                                                        "description":  "Обов’язковий ідентифікатор автора коментаря.",
+                                                                                                        "format":  "uuid"
+                                                                                                    },
+                                                                                       "text":  {
+                                                                                                    "maxLength":  2000,
+                                                                                                    "minLength":  1,
+                                                                                                    "type":  "string",
+                                                                                                    "description":  "Обов’язковий текст коментаря."
+                                                                                                }
+                                                                                   },
+                                                                    "additionalProperties":  false
+                                                                },
+                                       "CreateProjectRequest":  {
+                                                                    "required":  [
+                                                                                     "name"
+                                                                                 ],
+                                                                    "type":  "object",
+                                                                    "properties":  {
+                                                                                       "name":  {
+                                                                                                    "maxLength":  200,
+                                                                                                    "minLength":  1,
+                                                                                                    "type":  "string",
+                                                                                                    "description":  "Обов’язкова унікальна назва проєкту."
+                                                                                                },
+                                                                                       "description":  {
+                                                                                                           "maxLength":  1000,
+                                                                                                           "type":  "string",
+                                                                                                           "description":  "Необов’язковий опис проєкту.",
+                                                                                                           "nullable":  true
+                                                                                                       }
+                                                                                   },
+                                                                    "additionalProperties":  false
+                                                                },
+                                       "CreateTaskRequest":  {
+                                                                 "required":  [
+                                                                                  "title"
+                                                                              ],
+                                                                 "type":  "object",
+                                                                 "properties":  {
+                                                                                    "title":  {
+                                                                                                  "maxLength":  250,
+                                                                                                  "minLength":  1,
+                                                                                                  "type":  "string",
+                                                                                                  "description":  "Обов’язкова назва задачі."
+                                                                                              },
+                                                                                    "projectId":  {
+                                                                                                      "type":  "string",
+                                                                                                      "description":  "Ідентифікатор проєкту, до якого належить задача (якщо не вказано у маршруті URL).",
+                                                                                                      "format":  "uuid"
+                                                                                                  },
+                                                                                    "description":  {
+                                                                                                        "maxLength":  4000,
+                                                                                                        "type":  "string",
+                                                                                                        "description":  "Необов’язковий детальний опис задачі.",
+                                                                                                        "nullable":  true
+                                                                                                    },
+                                                                                    "priority":  {
+                                                                                                     "$ref":  "#/components/schemas/Priority"
+                                                                                                 },
+                                                                                    "dueDate":  {
+                                                                                                    "type":  "string",
+                                                                                                    "description":  "Необов’язковий дедлайн задачі у майбутньому (UTC).",
+                                                                                                    "format":  "date-time",
+                                                                                                    "nullable":  true
+                                                                                                },
+                                                                                    "assigneeId":  {
+                                                                                                       "type":  "string",
+                                                                                                       "description":  "Необов’язковий ідентифікатор користувача-виконавця.",
+                                                                                                       "format":  "uuid",
+                                                                                                       "nullable":  true
+                                                                                                   }
+                                                                                },
+                                                                 "additionalProperties":  false
+                                                             },
+                                       "CreateTaskResponse":  {
+                                                                  "type":  "object",
+                                                                  "properties":  {
+                                                                                     "task":  {
+                                                                                                  "$ref":  "#/components/schemas/TaskDetailDto"
+                                                                                              },
+                                                                                     "jobId":  {
+                                                                                                   "type":  "string",
+                                                                                                   "format":  "uuid"
+                                                                                               }
+                                                                                 },
+                                                                  "additionalProperties":  false
+                                                              },
+                                       "JobStatusDto":  {
+                                                            "type":  "object",
+                                                            "properties":  {
+                                                                               "jobId":  {
+                                                                                             "type":  "string",
+                                                                                             "format":  "uuid"
+                                                                                         },
+                                                                               "status":  {
+                                                                                              "type":  "string",
+                                                                                              "nullable":  true
+                                                                                          }
+                                                                           },
+                                                            "additionalProperties":  false
+                                                        },
+                                       "Priority":  {
+                                                        "enum":  [
+                                                                     "Low",
+                                                                     "Medium",
+                                                                     "High",
+                                                                     "Critical"
+                                                                 ],
+                                                        "type":  "string"
+                                                    },
+                                       "ProblemDetails":  {
+                                                              "type":  "object",
+                                                              "properties":  {
+                                                                                 "type":  {
+                                                                                              "type":  "string",
+                                                                                              "nullable":  true
+                                                                                          },
+                                                                                 "title":  {
+                                                                                               "type":  "string",
+                                                                                               "nullable":  true
+                                                                                           },
+                                                                                 "status":  {
+                                                                                                "type":  "integer",
+                                                                                                "format":  "int32",
+                                                                                                "nullable":  true
+                                                                                            },
+                                                                                 "detail":  {
+                                                                                                "type":  "string",
+                                                                                                "nullable":  true
+                                                                                            },
+                                                                                 "instance":  {
+                                                                                                  "type":  "string",
+                                                                                                  "nullable":  true
+                                                                                              }
+                                                                             },
+                                                              "additionalProperties":  {
+
+                                                                                       }
+                                                          },
+                                       "ProjectDetailDto":  {
+                                                                "type":  "object",
+                                                                "properties":  {
+                                                                                   "id":  {
+                                                                                              "type":  "string",
+                                                                                              "description":  "Унікальний ідентифікатор проєкту.",
+                                                                                              "format":  "uuid"
+                                                                                          },
+                                                                                   "name":  {
+                                                                                                "type":  "string",
+                                                                                                "description":  "Унікальна назва проєкту.",
+                                                                                                "nullable":  true
+                                                                                            },
+                                                                                   "description":  {
+                                                                                                       "type":  "string",
+                                                                                                       "description":  "Опис проєкту.",
+                                                                                                       "nullable":  true
+                                                                                                   },
+                                                                                   "createdAt":  {
+                                                                                                     "type":  "string",
+                                                                                                     "description":  "Дата створення проєкту (UTC).",
+                                                                                                     "format":  "date-time"
+                                                                                                 },
+                                                                                   "tasks":  {
+                                                                                                 "type":  "array",
+                                                                                                 "items":  {
+                                                                                                               "$ref":  "#/components/schemas/TaskDto"
+                                                                                                           },
+                                                                                                 "description":  "Впорядкований перелік задач проєкту.",
+                                                                                                 "nullable":  true
+                                                                                             }
+                                                                               },
+                                                                "additionalProperties":  false,
+                                                                "description":  "Детальна інформація про проєкт із переліком задач."
+                                                            },
+                                       "ProjectDto":  {
+                                                          "type":  "object",
+                                                          "properties":  {
+                                                                             "id":  {
+                                                                                        "type":  "string",
+                                                                                        "description":  "Унікальний ідентифікатор проєкту.",
+                                                                                        "format":  "uuid"
+                                                                                    },
+                                                                             "name":  {
+                                                                                          "type":  "string",
+                                                                                          "description":  "Унікальна назва проєкту.",
+                                                                                          "nullable":  true
+                                                                                      },
+                                                                             "description":  {
+                                                                                                 "type":  "string",
+                                                                                                 "description":  "Опис проєкту.",
+                                                                                                 "nullable":  true
+                                                                                             },
+                                                                             "tasksCount":  {
+                                                                                                "type":  "integer",
+                                                                                                "description":  "Загальна кількість задач у проєкті.",
+                                                                                                "format":  "int32"
+                                                                                            },
+                                                                             "createdAt":  {
+                                                                                               "type":  "string",
+                                                                                               "description":  "Дата та час створення проєкту (UTC).",
+                                                                                               "format":  "date-time"
+                                                                                           }
+                                                                         },
+                                                          "additionalProperties":  false,
+                                                          "description":  "Стисла інформація про проєкт для списку."
+                                                      },
+                                       "ProjectDtoPagedResult":  {
+                                                                     "type":  "object",
+                                                                     "properties":  {
+                                                                                        "items":  {
+                                                                                                      "type":  "array",
+                                                                                                      "items":  {
+                                                                                                                    "$ref":  "#/components/schemas/ProjectDto"
+                                                                                                                },
+                                                                                                      "description":  "Колекція елементів поточної сторінки.",
+                                                                                                      "nullable":  true
+                                                                                                  },
+                                                                                        "totalCount":  {
+                                                                                                           "type":  "integer",
+                                                                                                           "description":  "Загальна кількість елементів, що відповідають фільтрам.",
+                                                                                                           "format":  "int32"
+                                                                                                       },
+                                                                                        "page":  {
+                                                                                                     "type":  "integer",
+                                                                                                     "description":  "Номер поточної сторінки (починаючи з 1).",
+                                                                                                     "format":  "int32"
+                                                                                                 },
+                                                                                        "pageSize":  {
+                                                                                                         "type":  "integer",
+                                                                                                         "description":  "Кількість елементів на сторінці.",
+                                                                                                         "format":  "int32"
+                                                                                                     }
+                                                                                    },
+                                                                     "additionalProperties":  false,
+                                                                     "description":  "Узагальнений результат запиту з пагінацією."
+                                                                 },
+                                       "TaskDetailDto":  {
+                                                             "type":  "object",
+                                                             "properties":  {
+                                                                                "id":  {
+                                                                                           "type":  "string",
+                                                                                           "description":  "Унікальний ідентифікатор задачі.",
+                                                                                           "format":  "uuid"
+                                                                                       },
+                                                                                "title":  {
+                                                                                              "type":  "string",
+                                                                                              "description":  "Назва задачі.",
+                                                                                              "nullable":  true
+                                                                                          },
+                                                                                "description":  {
+                                                                                                    "type":  "string",
+                                                                                                    "description":  "Детальний опис задачі.",
+                                                                                                    "nullable":  true
+                                                                                                },
+                                                                                "status":  {
+                                                                                               "$ref":  "#/components/schemas/TaskStatus"
+                                                                                           },
+                                                                                "priority":  {
+                                                                                                 "$ref":  "#/components/schemas/Priority"
+                                                                                             },
+                                                                                "dueDate":  {
+                                                                                                "type":  "string",
+                                                                                                "description":  "Дедлайн задачі (UTC).",
+                                                                                                "format":  "date-time",
+                                                                                                "nullable":  true
+                                                                                            },
+                                                                                "coverImageUrl":  {
+                                                                                                      "type":  "string",
+                                                                                                      "description":  "Публічний відносний URL обкладинки задачі або null.",
+                                                                                                      "nullable":  true
+                                                                                                  },
+                                                                                "projectId":  {
+                                                                                                  "type":  "string",
+                                                                                                  "description":  "Ідентифікатор проєкту.",
+                                                                                                  "format":  "uuid"
+                                                                                              },
+                                                                                "projectName":  {
+                                                                                                    "type":  "string",
+                                                                                                    "description":  "Назва проєкту.",
+                                                                                                    "nullable":  true
+                                                                                                },
+                                                                                "assigneeId":  {
+                                                                                                   "type":  "string",
+                                                                                                   "description":  "Ідентифікатор призначеного виконавця.",
+                                                                                                   "format":  "uuid",
+                                                                                                   "nullable":  true
+                                                                                               },
+                                                                                "assigneeName":  {
+                                                                                                     "type":  "string",
+                                                                                                     "description":  "Ім\u0027я виконавця.",
+                                                                                                     "nullable":  true
+                                                                                                 },
+                                                                                "createdAt":  {
+                                                                                                  "type":  "string",
+                                                                                                  "description":  "Дата створення задачі (UTC).",
+                                                                                                  "format":  "date-time"
+                                                                                              },
+                                                                                "comments":  {
+                                                                                                 "type":  "array",
+                                                                                                 "items":  {
+                                                                                                               "$ref":  "#/components/schemas/CommentDto"
+                                                                                                           },
+                                                                                                 "description":  "Впорядкований за спаданням дати список коментарів.",
+                                                                                                 "nullable":  true
+                                                                                             }
+                                                                            },
+                                                             "additionalProperties":  false,
+                                                             "description":  "Детальна інформація про задачу із вкладеною колекцією коментарів та обкладинкою."
+                                                         },
+                                       "TaskDto":  {
+                                                       "type":  "object",
+                                                       "properties":  {
+                                                                          "id":  {
+                                                                                     "type":  "string",
+                                                                                     "description":  "Унікальний ідентифікатор задачі.",
+                                                                                     "format":  "uuid"
+                                                                                 },
+                                                                          "title":  {
+                                                                                        "type":  "string",
+                                                                                        "description":  "Назва задачі.",
+                                                                                        "nullable":  true
+                                                                                    },
+                                                                          "description":  {
+                                                                                              "type":  "string",
+                                                                                              "description":  "Необов’язковий опис задачі.",
+                                                                                              "nullable":  true
+                                                                                          },
+                                                                          "status":  {
+                                                                                         "$ref":  "#/components/schemas/TaskStatus"
+                                                                                     },
+                                                                          "priority":  {
+                                                                                           "$ref":  "#/components/schemas/Priority"
+                                                                                       },
+                                                                          "dueDate":  {
+                                                                                          "type":  "string",
+                                                                                          "description":  "Дедлайн задачі (UTC).",
+                                                                                          "format":  "date-time",
+                                                                                          "nullable":  true
+                                                                                      },
+                                                                          "coverImageUrl":  {
+                                                                                                "type":  "string",
+                                                                                                "description":  "Публічний відносний URL обкладинки задачі або null.",
+                                                                                                "nullable":  true
+                                                                                            },
+                                                                          "projectId":  {
+                                                                                            "type":  "string",
+                                                                                            "description":  "Ідентифікатор проєкту, до якого належить задача.",
+                                                                                            "format":  "uuid"
+                                                                                        },
+                                                                          "projectName":  {
+                                                                                              "type":  "string",
+                                                                                              "description":  "Назва проєкту.",
+                                                                                              "nullable":  true
+                                                                                          },
+                                                                          "assigneeId":  {
+                                                                                             "type":  "string",
+                                                                                             "description":  "Необов’язковий ідентифікатор виконавця.",
+                                                                                             "format":  "uuid",
+                                                                                             "nullable":  true
+                                                                                         },
+                                                                          "assigneeName":  {
+                                                                                               "type":  "string",
+                                                                                               "description":  "Ім\u0027я виконавця.",
+                                                                                               "nullable":  true
+                                                                                           },
+                                                                          "commentsCount":  {
+                                                                                                "type":  "integer",
+                                                                                                "description":  "Загальна кількість коментарів до задачі.",
+                                                                                                "format":  "int32"
+                                                                                            },
+                                                                          "createdAt":  {
+                                                                                            "type":  "string",
+                                                                                            "description":  "Дата та час створення задачі (UTC).",
+                                                                                            "format":  "date-time"
+                                                                                        }
+                                                                      },
+                                                       "additionalProperties":  false,
+                                                       "description":  "Стисла інформація про задачу для списку."
+                                                   },
+                                       "TaskDtoPagedResult":  {
+                                                                  "type":  "object",
+                                                                  "properties":  {
+                                                                                     "items":  {
+                                                                                                   "type":  "array",
+                                                                                                   "items":  {
+                                                                                                                 "$ref":  "#/components/schemas/TaskDto"
+                                                                                                             },
+                                                                                                   "description":  "Колекція елементів поточної сторінки.",
+                                                                                                   "nullable":  true
+                                                                                               },
+                                                                                     "totalCount":  {
+                                                                                                        "type":  "integer",
+                                                                                                        "description":  "Загальна кількість елементів, що відповідають фільтрам.",
+                                                                                                        "format":  "int32"
+                                                                                                    },
+                                                                                     "page":  {
+                                                                                                  "type":  "integer",
+                                                                                                  "description":  "Номер поточної сторінки (починаючи з 1).",
+                                                                                                  "format":  "int32"
+                                                                                              },
+                                                                                     "pageSize":  {
+                                                                                                      "type":  "integer",
+                                                                                                      "description":  "Кількість елементів на сторінці.",
+                                                                                                      "format":  "int32"
+                                                                                                  }
+                                                                                 },
+                                                                  "additionalProperties":  false,
+                                                                  "description":  "Узагальнений результат запиту з пагінацією."
+                                                              },
+                                       "TaskStatus":  {
+                                                          "enum":  [
+                                                                       "Todo",
+                                                                       "InProgress",
+                                                                       "Done"
+                                                                   ],
+                                                          "type":  "string"
+                                                      },
+                                       "ValidationProblemDetails":  {
+                                                                        "type":  "object",
+                                                                        "properties":  {
+                                                                                           "type":  {
+                                                                                                        "type":  "string",
+                                                                                                        "nullable":  true
+                                                                                                    },
+                                                                                           "title":  {
+                                                                                                         "type":  "string",
+                                                                                                         "nullable":  true
+                                                                                                     },
+                                                                                           "status":  {
+                                                                                                          "type":  "integer",
+                                                                                                          "format":  "int32",
+                                                                                                          "nullable":  true
+                                                                                                      },
+                                                                                           "detail":  {
+                                                                                                          "type":  "string",
+                                                                                                          "nullable":  true
+                                                                                                      },
+                                                                                           "instance":  {
+                                                                                                            "type":  "string",
+                                                                                                            "nullable":  true
+                                                                                                        },
+                                                                                           "errors":  {
+                                                                                                          "type":  "object",
+                                                                                                          "additionalProperties":  {
+                                                                                                                                       "type":  "array",
+                                                                                                                                       "items":  {
+                                                                                                                                                     "type":  "string"
+                                                                                                                                                 }
+                                                                                                                                   },
+                                                                                                          "nullable":  true
+                                                                                                      }
+                                                                                       },
+                                                                        "additionalProperties":  {
+
+                                                                                                 }
+                                                                    }
+                                   }
+                   },
+    "tags":  [
+                 {
+                     "name":  "Jobs"
+                 },
+                 {
+                     "name":  "Projects"
+                 },
+                 {
+                     "name":  "Tasks"
+                 },
+                 {
+                     "name":  "TaskTracker.Api"
+                 }
+             ]
 }

@@ -1,10 +1,13 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerUI;
+using TaskTracker.Api.BackgroundJobs;
 using TaskTracker.Api.Middleware;
 using TaskTracker.Application;
 using TaskTracker.Application.Common.Interfaces;
+using TaskTracker.Application.Interfaces;
 using TaskTracker.Application.Options;
 using TaskTracker.Application.Validation;
 using TaskTracker.Infrastructure;
@@ -72,15 +75,27 @@ builder.Services.AddSingleton(serviceProvider =>
     return new CoverImageUploadValidator(options.MaxFileSizeMb);
 });
 
-// 5. Реєстрація шарів Application та Infrastructure
+// 5. Черга фонових задач, потокобезпечне сховище станів та фоновий воркер
+builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+builder.Services.AddSingleton<IJobStatusStore, InMemoryJobStatusStore>();
+builder.Services.AddSingleton<LoggingRegistrationConfirmationSender>();
+builder.Services.AddSingleton<ITaskNotificationSender>(sp => sp.GetRequiredService<LoggingRegistrationConfirmationSender>());
+builder.Services.AddSingleton<IRegistrationConfirmationSender>(sp => sp.GetRequiredService<LoggingRegistrationConfirmationSender>());
+builder.Services.AddHostedService<BackgroundTaskWorker>();
+
+// 6. Реєстрація шарів Application та Infrastructure
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHealthChecks();
 
-// 6. Генератор OpenAPI (Swashbuckle) — конфігурація береться з типізованого OpenApiOptions
+// 7. Генератор OpenAPI (Swashbuckle) — конфігурація береться з типізованого OpenApiOptions
 builder.Services.AddSwaggerGen(options =>
 {
     var openApiOptions = builder.Configuration
