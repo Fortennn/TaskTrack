@@ -12,6 +12,7 @@ namespace TaskTracker.Application.DTOs.Tasks;
 /// <param name="Status">Статус задачі (Todo, InProgress, Done).</param>
 /// <param name="Priority">Пріоритет виконання (Low, Medium, High, Critical).</param>
 /// <param name="DueDate">Дедлайн задачі (UTC).</param>
+/// <param name="CoverImageUrl">Публічний відносний URL обкладинки задачі або null.</param>
 /// <param name="ProjectId">Ідентифікатор проєкту, до якого належить задача.</param>
 /// <param name="ProjectName">Назва проєкту.</param>
 /// <param name="AssigneeId">Необов’язковий ідентифікатор виконавця.</param>
@@ -25,6 +26,7 @@ public sealed record TaskDto(
     TaskStatus Status,
     Priority Priority,
     DateTime? DueDate,
+    string? CoverImageUrl,
     Guid ProjectId,
     string ProjectName,
     Guid? AssigneeId,

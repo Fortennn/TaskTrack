@@ -42,6 +42,7 @@ public class ProjectRepository : IProjectRepository
                         t.Status,
                         t.Priority,
                         t.DueDate,
+                        t.CoverImagePath != null ? $"/api/tasks/{t.Id}/cover" : null,
                         t.ProjectId,
                         p.Name,
                         t.AssigneeId,

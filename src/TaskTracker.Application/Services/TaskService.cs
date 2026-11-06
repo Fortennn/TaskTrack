@@ -1,7 +1,9 @@
 using TaskTracker.Application.Common;
 using TaskTracker.Application.Common.Interfaces;
+using TaskTracker.Application.DTOs;
 using TaskTracker.Application.DTOs.Comments;
 using TaskTracker.Application.DTOs.Tasks;
+using TaskTracker.Application.Validation;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Exceptions;
 
@@ -12,15 +14,21 @@ public sealed class TaskService : ITaskService
     private readonly ITaskRepository _taskRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ICoverImageStorage _coverImageStorage;
+    private readonly CoverImageUploadValidator _coverImageUploadValidator;
 
     public TaskService(
         ITaskRepository taskRepository,
         IProjectRepository projectRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICoverImageStorage coverImageStorage,
+        CoverImageUploadValidator coverImageUploadValidator)
     {
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
         _userRepository = userRepository;
+        _coverImageStorage = coverImageStorage;
+        _coverImageUploadValidator = coverImageUploadValidator;
     }
 
     public async Task<TaskDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -121,5 +129,79 @@ public sealed class TaskService : ITaskService
             string.Empty,
             comment.Text,
             comment.CreatedAt);
+    }
+
+    public async Task<TaskDetailDto> UploadCoverAsync(Guid id, CoverImageUpload? upload, CancellationToken cancellationToken = default)
+    {
+        var extension = _coverImageUploadValidator.ValidateAndGetExtension(upload);
+
+        var taskItem = await _taskRepository.GetByIdAsync(id, cancellationToken);
+        if (taskItem is null)
+        {
+            throw new NotFoundException($"Task with Id '{id}' does not exist.");
+        }
+
+        var previousCover = taskItem.CoverImagePath;
+        var newCover = await _coverImageStorage.SaveAsync(upload!.Content, extension, cancellationToken);
+
+        try
+        {
+            taskItem.CoverImagePath = newCover;
+            _taskRepository.Update(taskItem);
+            await _taskRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // Компенсаційна дія: видалення щойно створеного файлу у разі збою запису в БД
+            await _coverImageStorage.DeleteAsync(newCover, cancellationToken);
+            throw;
+        }
+
+        // Якщо в БД успішно оновлено нове посилання — безпечно видаляємо старий файл
+        if (!string.IsNullOrWhiteSpace(previousCover))
+        {
+            await _coverImageStorage.DeleteAsync(previousCover, cancellationToken);
+        }
+
+        return (await _taskRepository.GetDetailByIdAsync(taskItem.Id, cancellationToken))!;
+    }
+
+    public async Task<CoverImageFile> GetCoverAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var taskItem = await _taskRepository.GetByIdAsync(id, cancellationToken);
+        if (taskItem is null)
+        {
+            throw new NotFoundException($"Task with Id '{id}' does not exist.");
+        }
+
+        if (string.IsNullOrWhiteSpace(taskItem.CoverImagePath))
+        {
+            throw new NotFoundException($"Task with Id '{id}' does not have a cover image.");
+        }
+
+        return await _coverImageStorage.OpenReadAsync(taskItem.CoverImagePath, cancellationToken)
+            ?? throw new NotFoundException($"The cover image for task with Id '{id}' is unavailable.");
+    }
+
+    public async Task DeleteCoverAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var taskItem = await _taskRepository.GetByIdAsync(id, cancellationToken);
+        if (taskItem is null)
+        {
+            throw new NotFoundException($"Task with Id '{id}' does not exist.");
+        }
+
+        if (string.IsNullOrWhiteSpace(taskItem.CoverImagePath))
+        {
+            // Ідемпотентна поведінка: якщо обкладинка вже відсутня, повертаємо успіх без помилки
+            return;
+        }
+
+        var coverToDelete = taskItem.CoverImagePath;
+        taskItem.CoverImagePath = null;
+        _taskRepository.Update(taskItem);
+        await _taskRepository.SaveChangesAsync(cancellationToken);
+
+        await _coverImageStorage.DeleteAsync(coverToDelete, cancellationToken);
     }
 }

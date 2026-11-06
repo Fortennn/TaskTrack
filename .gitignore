@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Documents
 *.pdf
+
+# File Storage
+wwwroot/uploads/
+

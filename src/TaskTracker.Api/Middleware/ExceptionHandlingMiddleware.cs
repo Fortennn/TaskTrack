@@ -29,6 +29,9 @@ public sealed class ExceptionHandlingMiddleware(
     {
         var (status, title) = exception switch
         {
+            InvalidFileUploadException => (
+                StatusCodes.Status400BadRequest,
+                "Invalid cover image"),
             NotFoundException => (
                 StatusCodes.Status404NotFound,
                 "Resource not found"),

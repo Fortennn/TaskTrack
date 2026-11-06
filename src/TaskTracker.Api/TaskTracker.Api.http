@@ -1,75 +1,88 @@
 @Host = http://localhost:5057
 
 ### ===================================================================
-### УСПІШНІ СЦЕНАРІЇ (SUCCESS SCENARIOS)
+### 1. СТВОРЕННЯ ПРОЄКТУ ТА ЗАДАЧІ
 ### ===================================================================
 
-### 1. Створити новий проєкт
+### 1.1 Створити проєкт
 # @name createProject
 POST {{Host}}/api/projects
 Content-Type: application/json
 
 {
-  "name": "TaskTracker Web Platform",
-  "description": "Enterprise Task Management System"
+  "name": "TaskTracker Production Ready",
+  "description": "Проєкт для демонстрації завантаження файлів"
 }
 
 ### Зберегти ID створеного проєкту
 @projectId = {{createProject.response.body.id}}
 
-### 2. Створити задачу з валідною датою у майбутньому ([FutureDate])
+### 1.2 Створити задачу в проєкті
 # @name createTask
 POST {{Host}}/api/projects/{{projectId}}/tasks
 Content-Type: application/json
 
 {
-  "title": "Реалізувати валідацію та Problem Details",
-  "description": "Практична робота №4",
-  "priority": "High",
+  "title": "Розробити завантаження обкладинок (ПР 7)",
+  "description": "Підтримка multipart/form-data, потокове читання та безпечне видалення",
+  "priority": "Critical",
   "dueDate": "2027-12-31T23:59:59Z"
 }
 
 ### Зберегти ID створеної задачі
 @taskId = {{createTask.response.body.id}}
 
-### 3. Отримати список задач із пагінацією та фільтрацією
-GET {{Host}}/api/tasks?page=1&pageSize=10&dueDateFrom=2026-01-01&dueDateTo=2028-01-01
-Accept: application/json
-
 ### ===================================================================
-### ТЕСТУВАННЯ МАТРИЦІ ПОМИЛОК (ERROR MATRIX & PROBLEM DETAILS)
+### 2. РОБОТА З ОБКЛАДИНКОЮ ЗАДАЧІ (ПРАКТИЧНА РОБОТА 7)
 ### ===================================================================
 
-### 4. Тест 400 Bad Request: Відсутнє обов'язкове поле Title ([Required])
-POST {{Host}}/api/projects/{{projectId}}/tasks
-Content-Type: application/json
+### 2.1 Завантажити обкладинку (multipart/form-data PNG)
+POST {{Host}}/api/tasks/{{taskId}}/cover
+Content-Type: multipart/form-data; boundary=tasktracker-boundary
 
-{
-  "description": "Без заголовка"
-}
+--tasktracker-boundary
+Content-Disposition: form-data; name="cover"; filename="test-cover.png"
+Content-Type: image/png
 
-### 5. Тест 400 Bad Request: Дата у минулому ([FutureDate])
-POST {{Host}}/api/projects/{{projectId}}/tasks
-Content-Type: application/json
+< ./test-cover.png
+--tasktracker-boundary--
 
-{
-  "title": "Задача з датою у минулому",
-  "dueDate": "2020-01-01T00:00:00Z"
-}
+### 2.2 Отримати бінарний файл обкладинки задачі (GET /cover)
+GET {{Host}}/api/tasks/{{taskId}}/cover
+Accept: image/png, image/jpeg
 
-### 6. Тест 400 Bad Request: Взаємозалежні поля (DueDateFrom > DueDateTo) (IValidatableObject)
-GET {{Host}}/api/tasks?dueDateFrom=2028-01-01&dueDateTo=2026-01-01
+### 2.3 Переглянути задачу із згенерованим посиланням coverImageUrl
+GET {{Host}}/api/tasks/{{taskId}}
 Accept: application/json
 
-### 7. Тест 404 Not Found: Запит неіснуючого ресурсу (NotFoundException -> Problem Details)
-GET {{Host}}/api/tasks/00000000-0000-0000-0000-000000000000
-Accept: application/json
+### 2.4 Видалити обкладинку задачі (DELETE /cover -> 204 No Content)
+DELETE {{Host}}/api/tasks/{{taskId}}/cover
 
-### 8. Тест 409 Conflict: Спроба створити проєкт з уже існуючою назвою (ConflictException)
-POST {{Host}}/api/projects
-Content-Type: application/json
+### 2.5 Перевірити повторний запит після видалення (Очікується 404 Not Found)
+GET {{Host}}/api/tasks/{{taskId}}/cover
 
-{
-  "name": "TaskTracker Web Platform",
-  "description": "Дублікат назви"
-}
+### ===================================================================
+### 3. НЕГАТИВНІ СЦЕНАРІЇ ВАЛІДАЦІЇ ФАЙЛІВ (ПРОБЛЕМА PROBLEM DETAILS)
+### ===================================================================
+
+### 3.1 Помилка 400 Bad Request: Непідтримуваний тип файлу (text/plain замість image)
+POST {{Host}}/api/tasks/{{taskId}}/cover
+Content-Type: multipart/form-data; boundary=invalid-boundary
+
+--invalid-boundary
+Content-Disposition: form-data; name="cover"; filename="notes.txt"
+Content-Type: text/plain
+
+This is a plain text file, not an image!
+--invalid-boundary--
+
+### 3.2 Помилка 404 Not Found: Завантаження обкладинки для неіснуючої задачі
+POST {{Host}}/api/tasks/00000000-0000-0000-0000-000000000000/cover
+Content-Type: multipart/form-data; boundary=tasktracker-boundary
+
+--tasktracker-boundary
+Content-Disposition: form-data; name="cover"; filename="test-cover.png"
+Content-Type: image/png
+
+< ./test-cover.png
+--tasktracker-boundary--

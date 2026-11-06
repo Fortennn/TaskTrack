@@ -11,6 +11,7 @@ public class TaskItem : BaseEntity
     public TaskStatus Status { get; private set; } = TaskStatus.Todo;
     public Priority Priority { get; private set; } = Priority.Medium;
     public DateTime? DueDate { get; private set; }
+    public string? CoverImagePath { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
     public Guid ProjectId { get; private set; }

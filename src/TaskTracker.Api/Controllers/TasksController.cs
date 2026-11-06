@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskTracker.Application.Common;
+using TaskTracker.Application.DTOs;
 using TaskTracker.Application.DTOs.Comments;
 using TaskTracker.Application.DTOs.Tasks;
 using TaskTracker.Application.Services;
@@ -7,7 +8,7 @@ using TaskTracker.Application.Services;
 namespace TaskTracker.Api.Controllers;
 
 /// <summary>
-/// Управління задачами та вкладеними коментарями.
+/// Управління задачами, вкладеними коментарями та обкладинками.
 /// </summary>
 [ApiController]
 [Route("api/tasks")]
@@ -73,6 +74,71 @@ public sealed class TasksController : ControllerBase
     {
         var createdTask = await _taskService.CreateAsync(request, cancellationToken);
         return CreatedAtAction(nameof(GetTaskById), new { id = createdTask.Id }, createdTask);
+    }
+
+    /// <summary>
+    /// Завантажує або оновлює зображення-обкладинку для задачі (JPEG або PNG до 5 МБ).
+    /// </summary>
+    /// <param name="id">Ідентифікатор задачі (UUID).</param>
+    /// <param name="cover">Файл зображення у форматі multipart/form-data.</param>
+    /// <param name="cancellationToken">Токен скасування операції.</param>
+    /// <response code="200">Обкладинку успішно завантажено, повернуто оновлену задачу з посиланням на обкладинку.</response>
+    /// <response code="400">Некоректний файл (порожній, непідтримуваний формат або перевищено 5 МБ).</response>
+    /// <response code="404">Задачу не знайдено.</response>
+    [HttpPost("{id:guid}/cover")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType<TaskDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TaskDetailDto>> UploadCover(
+        Guid id,
+        IFormFile? cover,
+        CancellationToken cancellationToken)
+    {
+        await using var content = cover?.OpenReadStream();
+        var upload = cover is null || content is null
+            ? null
+            : new CoverImageUpload(
+                content,
+                cover.FileName,
+                cover.ContentType,
+                cover.Length);
+
+        var taskItem = await _taskService.UploadCoverAsync(id, upload, cancellationToken);
+        return Ok(taskItem);
+    }
+
+    /// <summary>
+    /// Отримує бінарний вміст зображення обкладинки задачі.
+    /// </summary>
+    /// <param name="id">Ідентифікатор задачі.</param>
+    /// <param name="cancellationToken">Токен скасування операції.</param>
+    /// <response code="200">Файл знайдено та повернуто у відповіді.</response>
+    /// <response code="404">Задачу або обкладинку не знайдено.</response>
+    [HttpGet("{id:guid}/cover")]
+    [Produces("image/jpeg", "image/png")]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCover(Guid id, CancellationToken cancellationToken)
+    {
+        var cover = await _taskService.GetCoverAsync(id, cancellationToken);
+        return File(cover.Content, cover.ContentType, enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Видаляє зображення обкладинки задачі.
+    /// </summary>
+    /// <param name="id">Ідентифікатор задачі.</param>
+    /// <param name="cancellationToken">Токен скасування операції.</param>
+    /// <response code="204">Обкладинку успішно видалено.</response>
+    /// <response code="404">Задачу не знайдено.</response>
+    [HttpDelete("{id:guid}/cover")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCover(Guid id, CancellationToken cancellationToken)
+    {
+        await _taskService.DeleteCoverAsync(id, cancellationToken);
+        return NoContent();
     }
 
     /// <summary>

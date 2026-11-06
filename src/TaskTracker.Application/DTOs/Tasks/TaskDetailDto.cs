@@ -5,7 +5,7 @@ using TaskStatus = TaskTracker.Domain.Enums.TaskStatus;
 namespace TaskTracker.Application.DTOs.Tasks;
 
 /// <summary>
-/// Детальна інформація про задачу із вкладеною колекцією коментарів.
+/// Детальна інформація про задачу із вкладеною колекцією коментарів та обкладинкою.
 /// </summary>
 /// <param name="Id">Унікальний ідентифікатор задачі.</param>
 /// <param name="Title">Назва задачі.</param>
@@ -13,6 +13,7 @@ namespace TaskTracker.Application.DTOs.Tasks;
 /// <param name="Status">Поточний статус задачі.</param>
 /// <param name="Priority">Пріоритет виконання.</param>
 /// <param name="DueDate">Дедлайн задачі (UTC).</param>
+/// <param name="CoverImageUrl">Публічний відносний URL обкладинки задачі або null.</param>
 /// <param name="ProjectId">Ідентифікатор проєкту.</param>
 /// <param name="ProjectName">Назва проєкту.</param>
 /// <param name="AssigneeId">Ідентифікатор призначеного виконавця.</param>
@@ -26,6 +27,7 @@ public sealed record TaskDetailDto(
     TaskStatus Status,
     Priority Priority,
     DateTime? DueDate,
+    string? CoverImageUrl,
     Guid ProjectId,
     string ProjectName,
     Guid? AssigneeId,

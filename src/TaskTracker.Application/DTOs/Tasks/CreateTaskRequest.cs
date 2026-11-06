@@ -10,8 +10,7 @@ public sealed class CreateTaskRequest
     [Required, MaxLength(250)]
     public string Title { get; init; } = string.Empty;
 
-    /// <summary>Обов’язковий ідентифікатор проєкту, до якого належить задача.</summary>
-    [Required]
+    /// <summary>Ідентифікатор проєкту, до якого належить задача (якщо не вказано у маршруті URL).</summary>
     public Guid ProjectId { get; init; }
 
     /// <summary>Необов’язковий детальний опис задачі.</summary>

@@ -27,6 +27,9 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(t => t.CoverImagePath)
+            .HasMaxLength(255);
+
         builder.Property(t => t.CreatedAt)
             .IsRequired();
 
