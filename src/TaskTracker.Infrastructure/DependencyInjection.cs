@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TaskTracker.Application.Common.Interfaces;
+using TaskTracker.Application.Options;
 using TaskTracker.Infrastructure.Persistence;
 using TaskTracker.Infrastructure.Persistence.Repositories;
 
@@ -9,10 +12,26 @@ namespace TaskTracker.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+        services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
+        {
+            var databaseOptions = serviceProvider
+                .GetRequiredService<IOptions<DatabaseOptions>>()
+                .Value;
+            var environment = serviceProvider.GetRequiredService<IHostEnvironment>();
+
+            options.UseNpgsql(databaseOptions.ConnectionString);
+
+            if (environment.IsDevelopment())
+            {
+                options.EnableDetailedErrors();
+                options.LogTo(
+                    Console.WriteLine,
+                    [DbLoggerCategory.Database.Command.Name],
+                    LogLevel.Information);
+            }
+        });
 
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ITaskRepository, TaskRepository>();

@@ -19,7 +19,18 @@ builder.Services.AddProblemDetails(options =>
         context.ProblemDetails.Type = null;
 });
 
-// 2. Налаштування сховища файлів (Strongly Typed Options) та валідація на старті
+// 2. Типізована конфігурація бази даних (DatabaseOptions) з перевіркою під час запуску
+builder.Services
+    .AddOptions<DatabaseOptions>()
+    .Configure<IConfiguration>((options, configuration) =>
+        options.ConnectionString = configuration.GetConnectionString("DefaultConnection") ?? string.Empty)
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.ConnectionString),
+        "ConnectionStrings:DefaultConnection is required. " +
+        "Use .NET user secrets locally or an environment variable in deployed environments.")
+    .ValidateOnStart();
+
+// 3. Типізована конфігурація файлового сховища (FileStorageOptions)
 builder.Services
     .AddOptions<FileStorageOptions>()
     .Bind(builder.Configuration.GetSection(FileStorageOptions.SectionName))
@@ -29,6 +40,18 @@ builder.Services
     .Validate(
         options => options.MaxFileSizeMb is > 0 and <= 100,
         "FileStorage:MaxFileSizeMb must be between 1 and 100.")
+    .ValidateOnStart();
+
+// 4. Типізована конфігурація OpenAPI (OpenApiOptions) — Самостійне завдання
+builder.Services
+    .AddOptions<OpenApiOptions>()
+    .Bind(builder.Configuration.GetSection(OpenApiOptions.SectionName))
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.Title),
+        "OpenApi:Title is required.")
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.Version),
+        "OpenApi:Version is required.")
     .ValidateOnStart();
 
 // Обмеження розміру multipart/form-data на рівні сервера
@@ -49,21 +72,26 @@ builder.Services.AddSingleton(serviceProvider =>
     return new CoverImageUploadValidator(options.MaxFileSizeMb);
 });
 
-// 3. Реєстрація шарів Application та Infrastructure
+// 5. Реєстрація шарів Application та Infrastructure
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 
-// 4. Генератор OpenAPI (Swashbuckle)
+// 6. Генератор OpenAPI (Swashbuckle) — конфігурація береться з типізованого OpenApiOptions
 builder.Services.AddSwaggerGen(options =>
 {
+    var openApiOptions = builder.Configuration
+        .GetSection(OpenApiOptions.SectionName)
+        .Get<OpenApiOptions>() ?? new OpenApiOptions();
+
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "TaskTracker API",
-        Version = "v1",
-        Description = "Платформа для управління проєктами, задачами та коментарями (Clean Architecture, ASP.NET Core .NET 10)"
+        Title = openApiOptions.Title,
+        Version = openApiOptions.Version,
+        Description = openApiOptions.Description
     });
 
     var apiXmlPath = Path.Combine(AppContext.BaseDirectory, "TaskTracker.Api.xml");
@@ -85,19 +113,17 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseStatusCodePages();
 
-// Swagger UI доступний у Development з оптимізованим відображенням зразків замість розкритих схем
+// Swagger UI доступний виключно в середовищі Development
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskTracker API v1");
-        
-        // Зручність відображення: одразу показувати компактний JSON-приклад (Example Value), а не схему з типами
         options.DefaultModelRendering(ModelRendering.Example);
-        options.DefaultModelsExpandDepth(-1); // Згортає нижній блок Schemas, прибираючи візуальний шум
-        options.DocExpansion(DocExpansion.List); // Список ендпоінтів розгорнуто компактно
-        options.DisplayRequestDuration(); // Показує час виконання запиту
+        options.DefaultModelsExpandDepth(-1);
+        options.DocExpansion(DocExpansion.List);
+        options.DisplayRequestDuration();
     });
     
     // Перенаправлення з кореневого URL на Swagger UI
@@ -105,11 +131,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Роздача статичних файлів з wwwroot
 app.UseStaticFiles();
 
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
