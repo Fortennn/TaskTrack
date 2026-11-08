@@ -9,7 +9,11 @@ public sealed record EventDto(
     double? Longitude,
     DateTime Date,
     int Capacity,
-    int CategoryId);
+    int CategoryId,
+    string? CategoryName = null,
+    int RegistrationCount = 0,
+    string? CoverImageUrl = null,
+    DateTime? CreatedAt = null);
 
 public sealed record EventDetailDto(
     Guid Id,
@@ -20,7 +24,11 @@ public sealed record EventDetailDto(
     double? Longitude,
     DateTime Date,
     int Capacity,
-    int CategoryId);
+    int CategoryId,
+    string? CategoryName = null,
+    int RegistrationCount = 0,
+    string? CoverImageUrl = null,
+    DateTime? CreatedAt = null);
 
 public sealed record CreateEventRequest(
     string Title,
@@ -37,3 +45,14 @@ public sealed record UpdateEventRequest(
     DateTime Date,
     int Capacity,
     int CategoryId);
+
+public sealed record CreateRegistrationRequest(
+    string AttendeeName,
+    string AttendeeEmail);
+
+public sealed record RegistrationDto(
+    int Id,
+    Guid EventId,
+    string AttendeeName,
+    string AttendeeEmail,
+    DateTime CreatedAt);

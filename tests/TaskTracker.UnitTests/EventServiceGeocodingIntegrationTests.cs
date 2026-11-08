@@ -22,7 +22,8 @@ public sealed class EventServiceGeocodingIntegrationTests : IDisposable
 
         _dbContext = new ApplicationDbContext(options);
         _geocodingService = new CountingTestGeocodingService();
-        _service = new EventService(_dbContext, _geocodingService);
+        var eventRepository = new TaskTracker.Infrastructure.Persistence.Repositories.EventRepository(_dbContext);
+        _service = new EventService(_dbContext, eventRepository, _geocodingService);
     }
 
     [Fact]

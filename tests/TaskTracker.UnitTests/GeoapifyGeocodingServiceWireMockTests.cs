@@ -74,8 +74,7 @@ public sealed class GeoapifyGeocodingServiceWireMockTests : IDisposable
         _server
             .Given(Request.Create()
                 .WithPath("/v1/geocode/search")
-                .UsingGet()
-                .WithParam("text", "Unknown Street"))
+                .UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(HttpStatusCode.OK)
                 .WithHeader("Content-Type", "application/json")

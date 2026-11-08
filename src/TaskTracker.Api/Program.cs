@@ -173,6 +173,28 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+if (builder.Configuration.GetValue<bool>("PerformanceSeed:Enabled"))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "Performance data can be seeded only in the Development environment.");
+    }
+
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<TaskTracker.Infrastructure.Persistence.PerformanceDataSeeder>();
+    var eventCount = builder.Configuration.GetValue(
+        "PerformanceSeed:EventCount",
+        100_000);
+    var batchSize = builder.Configuration.GetValue(
+        "PerformanceSeed:BatchSize",
+        2_000);
+    var reset = builder.Configuration.GetValue<bool>("PerformanceSeed:Reset");
+
+    await seeder.SeedAsync(eventCount, batchSize, reset);
+    return;
+}
+
 // Глобальний middleware обробки винятків та сторінки статус-кодів
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseStatusCodePages();

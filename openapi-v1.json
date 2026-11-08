@@ -6,6 +6,314 @@
                  "version":  "v1"
              },
     "paths":  {
+                  "/events":  {
+                                  "get":  {
+                                              "tags":  [
+                                                           "Events"
+                                                       ],
+                                              "summary":  "Отримує список подій з фільтрацією за датою, категорією, пошуковим рядком, сортуванням та пагінацією.",
+                                              "parameters":  [
+                                                                 {
+                                                                     "name":  "Page",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "maximum":  2147483647,
+                                                                                    "minimum":  1,
+                                                                                    "type":  "integer",
+                                                                                    "format":  "int32"
+                                                                                }
+                                                                 },
+                                                                 {
+                                                                     "name":  "PageSize",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "maximum":  100,
+                                                                                    "minimum":  1,
+                                                                                    "type":  "integer",
+                                                                                    "format":  "int32"
+                                                                                }
+                                                                 },
+                                                                 {
+                                                                     "name":  "CategoryId",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "type":  "integer",
+                                                                                    "format":  "int32"
+                                                                                }
+                                                                 },
+                                                                 {
+                                                                     "name":  "DateFrom",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "type":  "string",
+                                                                                    "format":  "date"
+                                                                                }
+                                                                 },
+                                                                 {
+                                                                     "name":  "DateTo",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "type":  "string",
+                                                                                    "format":  "date"
+                                                                                }
+                                                                 },
+                                                                 {
+                                                                     "name":  "Search",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "type":  "string"
+                                                                                }
+                                                                 },
+                                                                 {
+                                                                     "name":  "SortBy",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "type":  "string"
+                                                                                }
+                                                                 },
+                                                                 {
+                                                                     "name":  "Order",
+                                                                     "in":  "query",
+                                                                     "schema":  {
+                                                                                    "type":  "string"
+                                                                                }
+                                                                 }
+                                                             ],
+                                              "responses":  {
+                                                                "200":  {
+                                                                            "description":  "OK",
+                                                                            "content":  {
+                                                                                            "application/json":  {
+                                                                                                                     "schema":  {
+                                                                                                                                    "$ref":  "#/components/schemas/EventDtoPagedResult"
+                                                                                                                                }
+                                                                                                                 }
+                                                                                        }
+                                                                        },
+                                                                "400":  {
+                                                                            "description":  "Bad Request",
+                                                                            "content":  {
+                                                                                            "application/json":  {
+                                                                                                                     "schema":  {
+                                                                                                                                    "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                }
+                                                                                                                 }
+                                                                                        }
+                                                                        }
+                                                            }
+                                          },
+                                  "post":  {
+                                               "tags":  [
+                                                            "Events"
+                                                        ],
+                                               "summary":  "Створює нову подію та визначає координати за допомогою Geoapify API.",
+                                               "requestBody":  {
+                                                                   "content":  {
+                                                                                   "application/json":  {
+                                                                                                            "schema":  {
+                                                                                                                           "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                       }
+                                                                                                        },
+                                                                                   "text/json":  {
+                                                                                                     "schema":  {
+                                                                                                                    "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                }
+                                                                                                 },
+                                                                                   "application/*+json":  {
+                                                                                                              "schema":  {
+                                                                                                                             "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                         }
+                                                                                                          }
+                                                                               }
+                                                               },
+                                               "responses":  {
+                                                                 "201":  {
+                                                                             "description":  "Created",
+                                                                             "content":  {
+                                                                                             "application/json":  {
+                                                                                                                      "schema":  {
+                                                                                                                                     "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                 }
+                                                                                                                  }
+                                                                                         }
+                                                                         },
+                                                                 "400":  {
+                                                                             "description":  "Bad Request",
+                                                                             "content":  {
+                                                                                             "application/json":  {
+                                                                                                                      "schema":  {
+                                                                                                                                     "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                 }
+                                                                                                                  }
+                                                                                         }
+                                                                         },
+                                                                 "404":  {
+                                                                             "description":  "Not Found",
+                                                                             "content":  {
+                                                                                             "application/json":  {
+                                                                                                                      "schema":  {
+                                                                                                                                     "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                 }
+                                                                                                                  }
+                                                                                         }
+                                                                         }
+                                                             }
+                                           }
+                              },
+                  "/api/events":  {
+                                      "get":  {
+                                                  "tags":  [
+                                                               "Events"
+                                                           ],
+                                                  "summary":  "Отримує список подій з фільтрацією за датою, категорією, пошуковим рядком, сортуванням та пагінацією.",
+                                                  "parameters":  [
+                                                                     {
+                                                                         "name":  "Page",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "maximum":  2147483647,
+                                                                                        "minimum":  1,
+                                                                                        "type":  "integer",
+                                                                                        "format":  "int32"
+                                                                                    }
+                                                                     },
+                                                                     {
+                                                                         "name":  "PageSize",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "maximum":  100,
+                                                                                        "minimum":  1,
+                                                                                        "type":  "integer",
+                                                                                        "format":  "int32"
+                                                                                    }
+                                                                     },
+                                                                     {
+                                                                         "name":  "CategoryId",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "type":  "integer",
+                                                                                        "format":  "int32"
+                                                                                    }
+                                                                     },
+                                                                     {
+                                                                         "name":  "DateFrom",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "type":  "string",
+                                                                                        "format":  "date"
+                                                                                    }
+                                                                     },
+                                                                     {
+                                                                         "name":  "DateTo",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "type":  "string",
+                                                                                        "format":  "date"
+                                                                                    }
+                                                                     },
+                                                                     {
+                                                                         "name":  "Search",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "type":  "string"
+                                                                                    }
+                                                                     },
+                                                                     {
+                                                                         "name":  "SortBy",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "type":  "string"
+                                                                                    }
+                                                                     },
+                                                                     {
+                                                                         "name":  "Order",
+                                                                         "in":  "query",
+                                                                         "schema":  {
+                                                                                        "type":  "string"
+                                                                                    }
+                                                                     }
+                                                                 ],
+                                                  "responses":  {
+                                                                    "200":  {
+                                                                                "description":  "OK",
+                                                                                "content":  {
+                                                                                                "application/json":  {
+                                                                                                                         "schema":  {
+                                                                                                                                        "$ref":  "#/components/schemas/EventDtoPagedResult"
+                                                                                                                                    }
+                                                                                                                     }
+                                                                                            }
+                                                                            },
+                                                                    "400":  {
+                                                                                "description":  "Bad Request",
+                                                                                "content":  {
+                                                                                                "application/json":  {
+                                                                                                                         "schema":  {
+                                                                                                                                        "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                    }
+                                                                                                                     }
+                                                                                            }
+                                                                            }
+                                                                }
+                                              },
+                                      "post":  {
+                                                   "tags":  [
+                                                                "Events"
+                                                            ],
+                                                   "summary":  "Створює нову подію та визначає координати за допомогою Geoapify API.",
+                                                   "requestBody":  {
+                                                                       "content":  {
+                                                                                       "application/json":  {
+                                                                                                                "schema":  {
+                                                                                                                               "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                           }
+                                                                                                            },
+                                                                                       "text/json":  {
+                                                                                                         "schema":  {
+                                                                                                                        "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                    }
+                                                                                                     },
+                                                                                       "application/*+json":  {
+                                                                                                                  "schema":  {
+                                                                                                                                 "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                             }
+                                                                                                              }
+                                                                                   }
+                                                                   },
+                                                   "responses":  {
+                                                                     "201":  {
+                                                                                 "description":  "Created",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             },
+                                                                     "400":  {
+                                                                                 "description":  "Bad Request",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             },
+                                                                     "404":  {
+                                                                                 "description":  "Not Found",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             }
+                                                                 }
+                                               }
+                                  },
                   "/events/{id}":  {
                                        "get":  {
                                                    "tags":  [
@@ -49,7 +357,7 @@
                                                    "tags":  [
                                                                 "Events"
                                                             ],
-                                                   "summary":  "Оновлює дані події та оновлює координати лише за зміни адреси.",
+                                                   "summary":  "Оновлює дані події.",
                                                    "parameters":  [
                                                                       {
                                                                           "name":  "id",
@@ -86,6 +394,16 @@
                                                                                                  "application/json":  {
                                                                                                                           "schema":  {
                                                                                                                                          "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             },
+                                                                     "400":  {
+                                                                                 "description":  "Bad Request",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
                                                                                                                                      }
                                                                                                                       }
                                                                                              }
@@ -146,7 +464,7 @@
                                                        "tags":  [
                                                                     "Events"
                                                                 ],
-                                                       "summary":  "Оновлює дані події та оновлює координати лише за зміни адреси.",
+                                                       "summary":  "Оновлює дані події.",
                                                        "parameters":  [
                                                                           {
                                                                               "name":  "id",
@@ -187,6 +505,16 @@
                                                                                                                           }
                                                                                                  }
                                                                                  },
+                                                                         "400":  {
+                                                                                     "description":  "Bad Request",
+                                                                                     "content":  {
+                                                                                                     "application/json":  {
+                                                                                                                              "schema":  {
+                                                                                                                                             "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                         }
+                                                                                                                          }
+                                                                                                 }
+                                                                                 },
                                                                          "404":  {
                                                                                      "description":  "Not Found",
                                                                                      "content":  {
@@ -200,104 +528,124 @@
                                                                      }
                                                    }
                                        },
-                  "/events":  {
-                                  "post":  {
-                                               "tags":  [
-                                                            "Events"
-                                                        ],
-                                               "summary":  "Створює нову подію та визначає координати (Latitude, Longitude) за допомогою Geoapify API.",
-                                               "requestBody":  {
-                                                                   "content":  {
-                                                                                   "application/json":  {
-                                                                                                            "schema":  {
-                                                                                                                           "$ref":  "#/components/schemas/CreateEventRequest"
-                                                                                                                       }
-                                                                                                        },
-                                                                                   "text/json":  {
-                                                                                                     "schema":  {
-                                                                                                                    "$ref":  "#/components/schemas/CreateEventRequest"
-                                                                                                                }
-                                                                                                 },
-                                                                                   "application/*+json":  {
-                                                                                                              "schema":  {
-                                                                                                                             "$ref":  "#/components/schemas/CreateEventRequest"
-                                                                                                                         }
-                                                                                                          }
-                                                                               }
-                                                               },
-                                               "responses":  {
-                                                                 "201":  {
-                                                                             "description":  "Created",
-                                                                             "content":  {
-                                                                                             "application/json":  {
-                                                                                                                      "schema":  {
-                                                                                                                                     "$ref":  "#/components/schemas/EventDetailDto"
-                                                                                                                                 }
-                                                                                                                  }
-                                                                                         }
-                                                                         },
-                                                                 "404":  {
-                                                                             "description":  "Not Found",
-                                                                             "content":  {
-                                                                                             "application/json":  {
-                                                                                                                      "schema":  {
-                                                                                                                                     "$ref":  "#/components/schemas/ProblemDetails"
-                                                                                                                                 }
-                                                                                                                  }
-                                                                                         }
-                                                                         }
-                                                             }
-                                           }
-                              },
-                  "/api/events":  {
-                                      "post":  {
-                                                   "tags":  [
-                                                                "Events"
-                                                            ],
-                                                   "summary":  "Створює нову подію та визначає координати (Latitude, Longitude) за допомогою Geoapify API.",
-                                                   "requestBody":  {
-                                                                       "content":  {
-                                                                                       "application/json":  {
-                                                                                                                "schema":  {
-                                                                                                                               "$ref":  "#/components/schemas/CreateEventRequest"
-                                                                                                                           }
-                                                                                                            },
-                                                                                       "text/json":  {
-                                                                                                         "schema":  {
-                                                                                                                        "$ref":  "#/components/schemas/CreateEventRequest"
-                                                                                                                    }
-                                                                                                     },
-                                                                                       "application/*+json":  {
-                                                                                                                  "schema":  {
-                                                                                                                                 "$ref":  "#/components/schemas/CreateEventRequest"
+                  "/events/{id}/registrations":  {
+                                                     "post":  {
+                                                                  "tags":  [
+                                                                               "Events"
+                                                                           ],
+                                                                  "summary":  "Реєструє учасника на подію.",
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "id",
+                                                                                         "in":  "path",
+                                                                                         "required":  true,
+                                                                                         "schema":  {
+                                                                                                        "type":  "string"
+                                                                                                    }
+                                                                                     }
+                                                                                 ],
+                                                                  "requestBody":  {
+                                                                                      "content":  {
+                                                                                                      "application/json":  {
+                                                                                                                               "schema":  {
+                                                                                                                                              "$ref":  "#/components/schemas/CreateRegistrationRequest"
+                                                                                                                                          }
+                                                                                                                           },
+                                                                                                      "text/json":  {
+                                                                                                                        "schema":  {
+                                                                                                                                       "$ref":  "#/components/schemas/CreateRegistrationRequest"
+                                                                                                                                   }
+                                                                                                                    },
+                                                                                                      "application/*+json":  {
+                                                                                                                                 "schema":  {
+                                                                                                                                                "$ref":  "#/components/schemas/CreateRegistrationRequest"
+                                                                                                                                            }
                                                                                                                              }
-                                                                                                              }
-                                                                                   }
-                                                                   },
-                                                   "responses":  {
-                                                                     "201":  {
-                                                                                 "description":  "Created",
-                                                                                 "content":  {
-                                                                                                 "application/json":  {
-                                                                                                                          "schema":  {
-                                                                                                                                         "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                  }
+                                                                                  },
+                                                                  "responses":  {
+                                                                                    "201":  {
+                                                                                                "description":  "Created",
+                                                                                                "content":  {
+                                                                                                                "application/json":  {
+                                                                                                                                         "schema":  {
+                                                                                                                                                        "$ref":  "#/components/schemas/RegistrationDto"
+                                                                                                                                                    }
                                                                                                                                      }
-                                                                                                                      }
-                                                                                             }
-                                                                             },
-                                                                     "404":  {
-                                                                                 "description":  "Not Found",
-                                                                                 "content":  {
-                                                                                                 "application/json":  {
-                                                                                                                          "schema":  {
-                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                            }
+                                                                                            },
+                                                                                    "404":  {
+                                                                                                "description":  "Not Found",
+                                                                                                "content":  {
+                                                                                                                "application/json":  {
+                                                                                                                                         "schema":  {
+                                                                                                                                                        "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                                    }
                                                                                                                                      }
-                                                                                                                      }
-                                                                                             }
-                                                                             }
-                                                                 }
-                                               }
-                                  },
+                                                                                                            }
+                                                                                            }
+                                                                                }
+                                                              }
+                                                 },
+                  "/api/events/{id}/registrations":  {
+                                                         "post":  {
+                                                                      "tags":  [
+                                                                                   "Events"
+                                                                               ],
+                                                                      "summary":  "Реєструє учасника на подію.",
+                                                                      "parameters":  [
+                                                                                         {
+                                                                                             "name":  "id",
+                                                                                             "in":  "path",
+                                                                                             "required":  true,
+                                                                                             "schema":  {
+                                                                                                            "type":  "string"
+                                                                                                        }
+                                                                                         }
+                                                                                     ],
+                                                                      "requestBody":  {
+                                                                                          "content":  {
+                                                                                                          "application/json":  {
+                                                                                                                                   "schema":  {
+                                                                                                                                                  "$ref":  "#/components/schemas/CreateRegistrationRequest"
+                                                                                                                                              }
+                                                                                                                               },
+                                                                                                          "text/json":  {
+                                                                                                                            "schema":  {
+                                                                                                                                           "$ref":  "#/components/schemas/CreateRegistrationRequest"
+                                                                                                                                       }
+                                                                                                                        },
+                                                                                                          "application/*+json":  {
+                                                                                                                                     "schema":  {
+                                                                                                                                                    "$ref":  "#/components/schemas/CreateRegistrationRequest"
+                                                                                                                                                }
+                                                                                                                                 }
+                                                                                                      }
+                                                                                      },
+                                                                      "responses":  {
+                                                                                        "201":  {
+                                                                                                    "description":  "Created",
+                                                                                                    "content":  {
+                                                                                                                    "application/json":  {
+                                                                                                                                             "schema":  {
+                                                                                                                                                            "$ref":  "#/components/schemas/RegistrationDto"
+                                                                                                                                                        }
+                                                                                                                                         }
+                                                                                                                }
+                                                                                                },
+                                                                                        "404":  {
+                                                                                                    "description":  "Not Found",
+                                                                                                    "content":  {
+                                                                                                                    "application/json":  {
+                                                                                                                                             "schema":  {
+                                                                                                                                                            "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                                        }
+                                                                                                                                         }
+                                                                                                                }
+                                                                                                }
+                                                                                    }
+                                                                  }
+                                                     },
                   "/jobs/{id}":  {
                                      "get":  {
                                                  "tags":  [
@@ -1270,6 +1618,20 @@
                                                                                    },
                                                                     "additionalProperties":  false
                                                                 },
+                                       "CreateRegistrationRequest":  {
+                                                                         "type":  "object",
+                                                                         "properties":  {
+                                                                                            "attendeeName":  {
+                                                                                                                 "type":  "string",
+                                                                                                                 "nullable":  true
+                                                                                                             },
+                                                                                            "attendeeEmail":  {
+                                                                                                                  "type":  "string",
+                                                                                                                  "nullable":  true
+                                                                                                              }
+                                                                                        },
+                                                                         "additionalProperties":  false
+                                                                     },
                                        "CreateTaskRequest":  {
                                                                  "required":  [
                                                                                   "title"
@@ -1370,10 +1732,118 @@
                                                                                  "categoryId":  {
                                                                                                     "type":  "integer",
                                                                                                     "format":  "int32"
-                                                                                                }
+                                                                                                },
+                                                                                 "categoryName":  {
+                                                                                                      "type":  "string",
+                                                                                                      "nullable":  true
+                                                                                                  },
+                                                                                 "registrationCount":  {
+                                                                                                           "type":  "integer",
+                                                                                                           "format":  "int32"
+                                                                                                       },
+                                                                                 "coverImageUrl":  {
+                                                                                                       "type":  "string",
+                                                                                                       "nullable":  true
+                                                                                                   },
+                                                                                 "createdAt":  {
+                                                                                                   "type":  "string",
+                                                                                                   "format":  "date-time",
+                                                                                                   "nullable":  true
+                                                                                               }
                                                                              },
                                                               "additionalProperties":  false
                                                           },
+                                       "EventDto":  {
+                                                        "type":  "object",
+                                                        "properties":  {
+                                                                           "id":  {
+                                                                                      "type":  "string",
+                                                                                      "format":  "uuid"
+                                                                                  },
+                                                                           "title":  {
+                                                                                         "type":  "string",
+                                                                                         "nullable":  true
+                                                                                     },
+                                                                           "description":  {
+                                                                                               "type":  "string",
+                                                                                               "nullable":  true
+                                                                                           },
+                                                                           "location":  {
+                                                                                            "type":  "string",
+                                                                                            "nullable":  true
+                                                                                        },
+                                                                           "latitude":  {
+                                                                                            "type":  "number",
+                                                                                            "format":  "double",
+                                                                                            "nullable":  true
+                                                                                        },
+                                                                           "longitude":  {
+                                                                                             "type":  "number",
+                                                                                             "format":  "double",
+                                                                                             "nullable":  true
+                                                                                         },
+                                                                           "date":  {
+                                                                                        "type":  "string",
+                                                                                        "format":  "date-time"
+                                                                                    },
+                                                                           "capacity":  {
+                                                                                            "type":  "integer",
+                                                                                            "format":  "int32"
+                                                                                        },
+                                                                           "categoryId":  {
+                                                                                              "type":  "integer",
+                                                                                              "format":  "int32"
+                                                                                          },
+                                                                           "categoryName":  {
+                                                                                                "type":  "string",
+                                                                                                "nullable":  true
+                                                                                            },
+                                                                           "registrationCount":  {
+                                                                                                     "type":  "integer",
+                                                                                                     "format":  "int32"
+                                                                                                 },
+                                                                           "coverImageUrl":  {
+                                                                                                 "type":  "string",
+                                                                                                 "nullable":  true
+                                                                                             },
+                                                                           "createdAt":  {
+                                                                                             "type":  "string",
+                                                                                             "format":  "date-time",
+                                                                                             "nullable":  true
+                                                                                         }
+                                                                       },
+                                                        "additionalProperties":  false
+                                                    },
+                                       "EventDtoPagedResult":  {
+                                                                   "type":  "object",
+                                                                   "properties":  {
+                                                                                      "items":  {
+                                                                                                    "type":  "array",
+                                                                                                    "items":  {
+                                                                                                                  "$ref":  "#/components/schemas/EventDto"
+                                                                                                              },
+                                                                                                    "description":  "Колекція елементів поточної сторінки.",
+                                                                                                    "nullable":  true
+                                                                                                },
+                                                                                      "totalCount":  {
+                                                                                                         "type":  "integer",
+                                                                                                         "description":  "Загальна кількість елементів, що відповідають фільтрам.",
+                                                                                                         "format":  "int32"
+                                                                                                     },
+                                                                                      "page":  {
+                                                                                                   "type":  "integer",
+                                                                                                   "description":  "Номер поточної сторінки (починаючи з 1).",
+                                                                                                   "format":  "int32"
+                                                                                               },
+                                                                                      "pageSize":  {
+                                                                                                       "type":  "integer",
+                                                                                                       "description":  "Кількість елементів на сторінці.",
+                                                                                                       "format":  "int32"
+                                                                                                   }
+                                                                                  },
+                                                                   "additionalProperties":  false,
+                                                                   "description":  "Узагальнений результат запиту з пагінацією."
+                                                               },
                                        "JobStatusDto":  {
                                                             "type":  "object",
                                                             "properties":  {
@@ -1523,6 +1993,32 @@
                                                                      "additionalProperties":  false,
                                                                      "description":  "Узагальнений результат запиту з пагінацією."
                                                                  },
+                                       "RegistrationDto":  {
+                                                               "type":  "object",
+                                                               "properties":  {
+                                                                                  "id":  {
+                                                                                             "type":  "integer",
+                                                                                             "format":  "int32"
+                                                                                         },
+                                                                                  "eventId":  {
+                                                                                                  "type":  "string",
+                                                                                                  "format":  "uuid"
+                                                                                              },
+                                                                                  "attendeeName":  {
+                                                                                                       "type":  "string",
+                                                                                                       "nullable":  true
+                                                                                                   },
+                                                                                  "attendeeEmail":  {
+                                                                                                        "type":  "string",
+                                                                                                        "nullable":  true
+                                                                                                    },
+                                                                                  "createdAt":  {
+                                                                                                    "type":  "string",
+                                                                                                    "format":  "date-time"
+                                                                                                }
+                                                                              },
+                                                               "additionalProperties":  false
+                                                           },
                                        "TaskDetailDto":  {
                                                              "type":  "object",
                                                              "properties":  {

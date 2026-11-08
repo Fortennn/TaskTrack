@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -22,10 +23,12 @@ public static class DependencyInjection
                 .GetRequiredService<IOptions<DatabaseOptions>>()
                 .Value;
             var environment = serviceProvider.GetRequiredService<IHostEnvironment>();
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
             options.UseNpgsql(databaseOptions.ConnectionString);
 
-            if (environment.IsDevelopment())
+            if (environment.IsDevelopment()
+                && !configuration.GetValue<bool>("PerformanceSeed:Enabled"))
             {
                 options.EnableDetailedErrors();
                 options.LogTo(
@@ -38,7 +41,9 @@ public static class DependencyInjection
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IEventService, EventService>();
+        services.AddScoped<PerformanceDataSeeder>();
 
         return services;
     }

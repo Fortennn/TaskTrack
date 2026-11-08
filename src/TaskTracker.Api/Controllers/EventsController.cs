@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskTracker.Application.Common;
 using TaskTracker.Application.DTOs.Events;
 using TaskTracker.Application.Interfaces;
 using TaskTracker.Domain.Exceptions;
@@ -6,7 +7,7 @@ using TaskTracker.Domain.Exceptions;
 namespace TaskTracker.Api.Controllers;
 
 /// <summary>
-/// Управління подіями з автоматичним зовнішнім геокодуванням адрес через Geoapify API.
+/// Управління подіями, пошуком з пагінацією та реєстраціями учасників.
 /// </summary>
 [ApiController]
 [Route("events")]
@@ -14,6 +15,20 @@ namespace TaskTracker.Api.Controllers;
 [Produces("application/json")]
 public sealed class EventsController(IEventService eventService) : ControllerBase
 {
+    /// <summary>
+    /// Отримує список подій з фільтрацією за датою, категорією, пошуковим рядком, сортуванням та пагінацією.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType<PagedResult<EventDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedResult<EventDto>>> GetPaged(
+        [FromQuery] EventQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await eventService.GetPagedAsync(parameters, cancellationToken);
+        return Ok(result);
+    }
+
     /// <summary>
     /// Отримує інформацію про подію за її ідентифікатором.
     /// </summary>
@@ -31,10 +46,11 @@ public sealed class EventsController(IEventService eventService) : ControllerBas
     }
 
     /// <summary>
-    /// Створює нову подію та визначає координати (Latitude, Longitude) за допомогою Geoapify API.
+    /// Створює нову подію та визначає координати за допомогою Geoapify API.
     /// </summary>
     [HttpPost]
     [ProducesResponseType<EventDetailDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<EventDetailDto>> Create(
         [FromBody] CreateEventRequest request,
@@ -48,10 +64,11 @@ public sealed class EventsController(IEventService eventService) : ControllerBas
     }
 
     /// <summary>
-    /// Оновлює дані події та оновлює координати лише за зміни адреси.
+    /// Оновлює дані події.
     /// </summary>
     [HttpPut("{id}")]
     [ProducesResponseType<EventDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<EventDetailDto>> Update(
         string id,
@@ -60,5 +77,20 @@ public sealed class EventsController(IEventService eventService) : ControllerBas
     {
         var updated = await eventService.UpdateAsync(id, request, cancellationToken);
         return Ok(updated);
+    }
+
+    /// <summary>
+    /// Реєструє учасника на подію.
+    /// </summary>
+    [HttpPost("{id}/registrations")]
+    [ProducesResponseType<RegistrationDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RegistrationDto>> RegisterAttendee(
+        string id,
+        [FromBody] CreateRegistrationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var registration = await eventService.RegisterAttendeeAsync(id, request, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, registration);
     }
 }

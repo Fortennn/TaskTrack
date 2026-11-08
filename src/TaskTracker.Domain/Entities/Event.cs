@@ -12,6 +12,10 @@ public class Event : BaseEntity
     public DateTime Date { get; set; }
     public int Capacity { get; set; }
     public int CategoryId { get; set; }
+    public Category? Category { get; set; }
+    public string? CoverImageFileName { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
 
     public Event() { }
 
@@ -23,7 +27,8 @@ public class Event : BaseEntity
         int capacity,
         int categoryId,
         double? latitude = null,
-        double? longitude = null)
+        double? longitude = null,
+        string? coverImageFileName = null)
     {
         Title = title;
         Description = description;
@@ -33,5 +38,7 @@ public class Event : BaseEntity
         CategoryId = categoryId;
         Latitude = latitude;
         Longitude = longitude;
+        CoverImageFileName = coverImageFileName;
+        CreatedAt = DateTime.UtcNow;
     }
 }

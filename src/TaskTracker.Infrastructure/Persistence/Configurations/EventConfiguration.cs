@@ -22,16 +22,22 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .HasMaxLength(500);
 
         builder.Property(e => e.Latitude);
-
         builder.Property(e => e.Longitude);
+        builder.Property(e => e.Date).IsRequired();
+        builder.Property(e => e.Capacity).IsRequired();
+        builder.Property(e => e.CategoryId).IsRequired();
+        builder.Property(e => e.CreatedAt).IsRequired();
+        builder.Property(e => e.CoverImageFileName).HasMaxLength(500);
 
-        builder.Property(e => e.Date)
-            .IsRequired();
+        builder.HasOne(e => e.Category)
+            .WithMany(c => c.Events)
+            .HasForeignKey(e => e.CategoryId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Property(e => e.Capacity)
-            .IsRequired();
-
-        builder.Property(e => e.CategoryId)
-            .IsRequired();
+        builder.HasIndex(eventItem => new
+        {
+            eventItem.Date,
+            eventItem.Id
+        });
     }
 }

@@ -202,4 +202,55 @@ Content-Type: application/json
   "priority": "High"
 }
 
+### ===================================================================
+### 6. ОПТИМІЗАЦІЯ ЗАПИТІВ ТА ІНДЕКСИ (ПРАКТИЧНА РОБОТА 11)
+### ===================================================================
+
+### 6.1 Запит списку подій з фільтром за датою та сортуванням (Index Scan по IX_Events_Date_Id)
+GET {{Host}}/events?dateFrom=2035-06-15&dateTo=2035-06-15&sortBy=date&order=asc&page=1&pageSize=20
+Accept: application/json
+
+### 6.2 Створити подію для перевірки проєкції (без over-fetching реєстрацій)
+# @name createProjectionWorkshop
+POST {{Host}}/events
+Content-Type: application/json
+
+{
+  "title": "Projection workshop",
+  "description": "Checking RegistrationCount in the event list.",
+  "location": "Kyiv, Khreshchatyk 1",
+  "date": "2035-09-01T10:00:00Z",
+  "capacity": 30,
+  "categoryId": 1
+}
+
+@workshopId = {{createProjectionWorkshop.response.body.id}}
+
+### 6.3 Зареєструвати першого учасника на подію (Олена)
+POST {{Host}}/events/{{workshopId}}/registrations
+Content-Type: application/json
+
+{
+  "attendeeName": "Olena",
+  "attendeeEmail": "olena@example.com"
+}
+
+### 6.4 Зареєструвати другого учасника на подію (Тарас)
+POST {{Host}}/events/{{workshopId}}/registrations
+Content-Type: application/json
+
+{
+  "attendeeName": "Taras",
+  "attendeeEmail": "taras@example.com"
+}
+
+### 6.5 Отримати список подій за назвою (Перевірка проєкції RegistrationCount=2 без вибірки таблиці Registrations)
+GET {{Host}}/events?search=Projection%20workshop
+Accept: application/json
+
+### 6.6 Перевірка валідації граничного розміру сторінки (pageSize=101 -> Очікується 400 Bad Request)
+GET {{Host}}/events?pageSize=101
+Accept: application/json
+
+
 

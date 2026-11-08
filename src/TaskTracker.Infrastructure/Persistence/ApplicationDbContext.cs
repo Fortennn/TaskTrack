@@ -13,6 +13,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Event> Events => Set<Event>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Registration> Registrations => Set<Registration>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
