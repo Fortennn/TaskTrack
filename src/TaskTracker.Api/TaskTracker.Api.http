@@ -141,3 +141,65 @@ Content-Type: application/json
 GET {{Host}}/jobs/{{subsequentJobId}}
 Accept: application/json
 
+### ===================================================================
+### 5. ІНТЕГРАЦІЯ ЗОВНІШНЬОГО HTTP API ТА ГЕОКОДУВАННЯ (ПРАКТИЧНА РОБОТА 10)
+### ===================================================================
+
+### 5.1 Створити подію з автоматичним геокодуванням адреси
+# @name createEvent
+POST {{Host}}/events
+Content-Type: application/json
+
+{
+  "title": "ASP.NET Core Community Day",
+  "description": "Подія для перевірки зовнішнього API",
+  "location": "Майдан Незалежності, Київ, Україна",
+  "date": "2027-05-20T10:00:00+03:00",
+  "capacity": 120,
+  "categoryId": 1
+}
+
+@eventId = {{createEvent.response.body.id}}
+
+### 5.2 Отримати інформацію про створену подію з координатами
+GET {{Host}}/events/{{eventId}}
+Accept: application/json
+
+### 5.3 Оновити адресу події (PUT /events/{{eventId}})
+PUT {{Host}}/events/{{eventId}}
+Content-Type: application/json
+
+{
+  "title": "ASP.NET Core Community Day — оновлено",
+  "description": "Нова адреса",
+  "location": "площа Ринок, Львів, Україна",
+  "date": "2027-05-20T10:00:00+03:00",
+  "capacity": 120,
+  "categoryId": 1
+}
+
+### 5.4 Запит із невідомою категорією (Очікується 404, геокодування не викликається)
+POST {{Host}}/events
+Content-Type: application/json
+
+{
+  "title": "Подія з некоректною категорією",
+  "location": "Київ",
+  "date": "2027-05-20T10:00:00+03:00",
+  "capacity": 50,
+  "categoryId": 999
+}
+
+### 5.5 Створити задачу в TaskTracker із фізичною адресою для геокодування
+POST {{Host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Виїзд інженера на об'єкт замовника",
+  "projectId": "{{projectId}}",
+  "description": "Монтаж та тестування обладнання",
+  "location": "вул. Хрещатик, 1, Київ, Україна",
+  "priority": "High"
+}
+
+

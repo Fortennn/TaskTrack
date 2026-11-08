@@ -12,6 +12,9 @@ public class TaskItem : BaseEntity
     public Priority Priority { get; private set; } = Priority.Medium;
     public DateTime? DueDate { get; private set; }
     public string? CoverImagePath { get; set; }
+    public string? Location { get; private set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
     public Guid ProjectId { get; private set; }
@@ -31,7 +34,10 @@ public class TaskItem : BaseEntity
         string? description = null, 
         Priority priority = Priority.Medium, 
         DateTime? dueDate = null, 
-        Guid? assigneeId = null)
+        Guid? assigneeId = null,
+        string? location = null,
+        double? latitude = null,
+        double? longitude = null)
     {
         Title = title;
         ProjectId = projectId;
@@ -39,7 +45,17 @@ public class TaskItem : BaseEntity
         Priority = priority;
         DueDate = dueDate;
         AssigneeId = assigneeId;
+        Location = location;
+        Latitude = latitude;
+        Longitude = longitude;
         Status = TaskStatus.Todo;
         CreatedAt = DateTime.UtcNow;
+    }
+
+    public void SetLocation(string? location, double? latitude, double? longitude)
+    {
+        Location = location;
+        Latitude = latitude;
+        Longitude = longitude;
     }
 }

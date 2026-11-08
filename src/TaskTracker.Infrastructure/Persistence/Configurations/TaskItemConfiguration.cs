@@ -30,6 +30,13 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
         builder.Property(t => t.CoverImagePath)
             .HasMaxLength(255);
 
+        builder.Property(t => t.Location)
+            .HasMaxLength(500);
+
+        builder.Property(t => t.Latitude);
+
+        builder.Property(t => t.Longitude);
+
         builder.Property(t => t.CreatedAt)
             .IsRequired();
 

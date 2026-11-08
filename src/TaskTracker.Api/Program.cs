@@ -11,6 +11,7 @@ using TaskTracker.Application.Interfaces;
 using TaskTracker.Application.Options;
 using TaskTracker.Application.Validation;
 using TaskTracker.Infrastructure;
+using TaskTracker.Infrastructure.ExternalServices;
 using TaskTracker.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,6 +58,54 @@ builder.Services
         "OpenApi:Version is required.")
     .ValidateOnStart();
 
+// 5. Кеш у пам'яті (IMemoryCache) з обмеженням розміру
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = builder.Configuration.GetValue<long?>(
+        $"{GeocodingOptions.SectionName}:CacheSize") ?? 1_000;
+});
+
+// 6. Типізована конфігурація геокодування (GeocodingOptions) — Практична робота 10
+builder.Services
+    .AddOptions<GeocodingOptions>()
+    .Bind(builder.Configuration.GetSection(GeocodingOptions.SectionName))
+    .Validate(
+        options => Uri.TryCreate(
+            options.BaseUrl,
+            UriKind.Absolute,
+            out var baseUrl) &&
+            baseUrl.Scheme == Uri.UriSchemeHttps,
+        "Geocoding:BaseUrl must be an absolute HTTPS URL.")
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.ApiKey),
+        "Geocoding:ApiKey is required.")
+    .Validate(
+        options => options.TimeoutSeconds is > 0 and <= 60,
+        "Geocoding:TimeoutSeconds must be between 1 and 60.")
+    .Validate(
+        options => options.CacheDurationMinutes > 0,
+        "Geocoding:CacheDurationMinutes must be greater than 0.")
+    .Validate(
+        options => options.NegativeCacheDurationMinutes > 0,
+        "Geocoding:NegativeCacheDurationMinutes must be greater than 0.")
+    .Validate(
+        options => options.CacheSize > 0,
+        "Geocoding:CacheSize must be greater than 0.")
+    .ValidateOnStart();
+
+// 7. Typed HttpClient для зовнішнього HTTP API (Geoapify) через IHttpClientFactory
+builder.Services.AddHttpClient<IGeocodingService, GeoapifyGeocodingService>(
+    (serviceProvider, client) =>
+    {
+        var options = serviceProvider
+            .GetRequiredService<IOptions<GeocodingOptions>>()
+            .Value;
+
+        client.BaseAddress = new Uri(options.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("TaskTracker/1.0");
+    });
+
 // Обмеження розміру multipart/form-data на рівні сервера
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -75,7 +124,7 @@ builder.Services.AddSingleton(serviceProvider =>
     return new CoverImageUploadValidator(options.MaxFileSizeMb);
 });
 
-// 5. Черга фонових задач, потокобезпечне сховище станів та фоновий воркер
+// 8. Черга фонових задач, потокобезпечне сховище станів та фоновий воркер
 builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
 builder.Services.AddSingleton<IJobStatusStore, InMemoryJobStatusStore>();
 builder.Services.AddSingleton<LoggingRegistrationConfirmationSender>();
@@ -83,7 +132,7 @@ builder.Services.AddSingleton<ITaskNotificationSender>(sp => sp.GetRequiredServi
 builder.Services.AddSingleton<IRegistrationConfirmationSender>(sp => sp.GetRequiredService<LoggingRegistrationConfirmationSender>());
 builder.Services.AddHostedService<BackgroundTaskWorker>();
 
-// 6. Реєстрація шарів Application та Infrastructure
+// 9. Реєстрація шарів Application та Infrastructure
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 
@@ -95,7 +144,7 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHealthChecks();
 
-// 7. Генератор OpenAPI (Swashbuckle) — конфігурація береться з типізованого OpenApiOptions
+// 10. Генератор OpenAPI (Swashbuckle) — конфігурація береться з типізованого OpenApiOptions
 builder.Services.AddSwaggerGen(options =>
 {
     var openApiOptions = builder.Configuration

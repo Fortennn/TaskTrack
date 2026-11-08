@@ -40,7 +40,8 @@ public sealed class TaskServiceBackgroundJobTests
             validator,
             queueCapture,
             statusStore,
-            recordingSender);
+            recordingSender,
+            new FakeGeocodingService());
 
         var request = new CreateTaskRequest
         {
@@ -122,6 +123,9 @@ public sealed class TaskServiceBackgroundJobTests
                 _saved.Priority,
                 _saved.DueDate,
                 null,
+                _saved.Location,
+                _saved.Latitude,
+                _saved.Longitude,
                 _saved.ProjectId,
                 "Project",
                 _saved.AssigneeId,
@@ -206,5 +210,11 @@ public sealed class TaskServiceBackgroundJobTests
 
         public Task DeleteAsync(string relativePath, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    private sealed class FakeGeocodingService : IGeocodingService
+    {
+        public Task<Coordinates?> GeocodeAsync(string address, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Coordinates?>(new Coordinates(50.4501, 30.5234));
     }
 }

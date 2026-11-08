@@ -26,4 +26,8 @@ public sealed class CreateTaskRequest
 
     /// <summary>Необов’язковий ідентифікатор користувача-виконавця.</summary>
     public Guid? AssigneeId { get; init; }
+
+    /// <summary>Необов’язкова фізична адреса/локація задачі для геокодування.</summary>
+    [MaxLength(500)]
+    public string? Location { get; init; }
 }

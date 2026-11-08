@@ -21,6 +21,7 @@ public sealed class TaskService : ITaskService
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly IJobStatusStore _jobStatusStore;
     private readonly ITaskNotificationSender _notificationSender;
+    private readonly IGeocodingService _geocodingService;
 
     public TaskService(
         ITaskRepository taskRepository,
@@ -30,7 +31,8 @@ public sealed class TaskService : ITaskService
         CoverImageUploadValidator coverImageUploadValidator,
         IBackgroundTaskQueue taskQueue,
         IJobStatusStore jobStatusStore,
-        ITaskNotificationSender notificationSender)
+        ITaskNotificationSender notificationSender,
+        IGeocodingService geocodingService)
     {
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
@@ -40,6 +42,7 @@ public sealed class TaskService : ITaskService
         _taskQueue = taskQueue;
         _jobStatusStore = jobStatusStore;
         _notificationSender = notificationSender;
+        _geocodingService = geocodingService;
     }
 
     public async Task<TaskDetailDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -78,13 +81,22 @@ public sealed class TaskService : ITaskService
             assignee = await _userRepository.GetByIdAsync(request.AssigneeId.Value, cancellationToken);
         }
 
+        Coordinates? coordinates = null;
+        if (!string.IsNullOrWhiteSpace(request.Location))
+        {
+            coordinates = await _geocodingService.GeocodeAsync(request.Location, cancellationToken);
+        }
+
         var task = new TaskItem(
             request.Title,
             request.ProjectId,
             request.Description,
             request.Priority,
             request.DueDate,
-            request.AssigneeId);
+            request.AssigneeId,
+            request.Location,
+            coordinates?.Latitude,
+            coordinates?.Longitude);
 
         await _taskRepository.AddAsync(task, cancellationToken);
         await _taskRepository.SaveChangesAsync(cancellationToken);
@@ -120,7 +132,8 @@ public sealed class TaskService : ITaskService
             Description = request.Description,
             Priority = request.Priority,
             DueDate = request.DueDate,
-            AssigneeId = request.AssigneeId
+            AssigneeId = request.AssigneeId,
+            Location = request.Location
         };
         return await CreateAsync(taskRequest, cancellationToken);
     }

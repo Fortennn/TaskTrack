@@ -6,6 +6,298 @@
                  "version":  "v1"
              },
     "paths":  {
+                  "/events/{id}":  {
+                                       "get":  {
+                                                   "tags":  [
+                                                                "Events"
+                                                            ],
+                                                   "summary":  "Отримує інформацію про подію за її ідентифікатором.",
+                                                   "parameters":  [
+                                                                      {
+                                                                          "name":  "id",
+                                                                          "in":  "path",
+                                                                          "required":  true,
+                                                                          "schema":  {
+                                                                                         "type":  "string"
+                                                                                     }
+                                                                      }
+                                                                  ],
+                                                   "responses":  {
+                                                                     "200":  {
+                                                                                 "description":  "OK",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             },
+                                                                     "404":  {
+                                                                                 "description":  "Not Found",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             }
+                                                                 }
+                                               },
+                                       "put":  {
+                                                   "tags":  [
+                                                                "Events"
+                                                            ],
+                                                   "summary":  "Оновлює дані події та оновлює координати лише за зміни адреси.",
+                                                   "parameters":  [
+                                                                      {
+                                                                          "name":  "id",
+                                                                          "in":  "path",
+                                                                          "required":  true,
+                                                                          "schema":  {
+                                                                                         "type":  "string"
+                                                                                     }
+                                                                      }
+                                                                  ],
+                                                   "requestBody":  {
+                                                                       "content":  {
+                                                                                       "application/json":  {
+                                                                                                                "schema":  {
+                                                                                                                               "$ref":  "#/components/schemas/UpdateEventRequest"
+                                                                                                                           }
+                                                                                                            },
+                                                                                       "text/json":  {
+                                                                                                         "schema":  {
+                                                                                                                        "$ref":  "#/components/schemas/UpdateEventRequest"
+                                                                                                                    }
+                                                                                                     },
+                                                                                       "application/*+json":  {
+                                                                                                                  "schema":  {
+                                                                                                                                 "$ref":  "#/components/schemas/UpdateEventRequest"
+                                                                                                                             }
+                                                                                                              }
+                                                                                   }
+                                                                   },
+                                                   "responses":  {
+                                                                     "200":  {
+                                                                                 "description":  "OK",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             },
+                                                                     "404":  {
+                                                                                 "description":  "Not Found",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             }
+                                                                 }
+                                               }
+                                   },
+                  "/api/events/{id}":  {
+                                           "get":  {
+                                                       "tags":  [
+                                                                    "Events"
+                                                                ],
+                                                       "summary":  "Отримує інформацію про подію за її ідентифікатором.",
+                                                       "parameters":  [
+                                                                          {
+                                                                              "name":  "id",
+                                                                              "in":  "path",
+                                                                              "required":  true,
+                                                                              "schema":  {
+                                                                                             "type":  "string"
+                                                                                         }
+                                                                          }
+                                                                      ],
+                                                       "responses":  {
+                                                                         "200":  {
+                                                                                     "description":  "OK",
+                                                                                     "content":  {
+                                                                                                     "application/json":  {
+                                                                                                                              "schema":  {
+                                                                                                                                             "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                         }
+                                                                                                                          }
+                                                                                                 }
+                                                                                 },
+                                                                         "404":  {
+                                                                                     "description":  "Not Found",
+                                                                                     "content":  {
+                                                                                                     "application/json":  {
+                                                                                                                              "schema":  {
+                                                                                                                                             "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                         }
+                                                                                                                          }
+                                                                                                 }
+                                                                                 }
+                                                                     }
+                                                   },
+                                           "put":  {
+                                                       "tags":  [
+                                                                    "Events"
+                                                                ],
+                                                       "summary":  "Оновлює дані події та оновлює координати лише за зміни адреси.",
+                                                       "parameters":  [
+                                                                          {
+                                                                              "name":  "id",
+                                                                              "in":  "path",
+                                                                              "required":  true,
+                                                                              "schema":  {
+                                                                                             "type":  "string"
+                                                                                         }
+                                                                          }
+                                                                      ],
+                                                       "requestBody":  {
+                                                                           "content":  {
+                                                                                           "application/json":  {
+                                                                                                                    "schema":  {
+                                                                                                                                   "$ref":  "#/components/schemas/UpdateEventRequest"
+                                                                                                                               }
+                                                                                                                },
+                                                                                           "text/json":  {
+                                                                                                             "schema":  {
+                                                                                                                            "$ref":  "#/components/schemas/UpdateEventRequest"
+                                                                                                                        }
+                                                                                                         },
+                                                                                           "application/*+json":  {
+                                                                                                                      "schema":  {
+                                                                                                                                     "$ref":  "#/components/schemas/UpdateEventRequest"
+                                                                                                                                 }
+                                                                                                                  }
+                                                                                       }
+                                                                       },
+                                                       "responses":  {
+                                                                         "200":  {
+                                                                                     "description":  "OK",
+                                                                                     "content":  {
+                                                                                                     "application/json":  {
+                                                                                                                              "schema":  {
+                                                                                                                                             "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                         }
+                                                                                                                          }
+                                                                                                 }
+                                                                                 },
+                                                                         "404":  {
+                                                                                     "description":  "Not Found",
+                                                                                     "content":  {
+                                                                                                     "application/json":  {
+                                                                                                                              "schema":  {
+                                                                                                                                             "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                         }
+                                                                                                                          }
+                                                                                                 }
+                                                                                 }
+                                                                     }
+                                                   }
+                                       },
+                  "/events":  {
+                                  "post":  {
+                                               "tags":  [
+                                                            "Events"
+                                                        ],
+                                               "summary":  "Створює нову подію та визначає координати (Latitude, Longitude) за допомогою Geoapify API.",
+                                               "requestBody":  {
+                                                                   "content":  {
+                                                                                   "application/json":  {
+                                                                                                            "schema":  {
+                                                                                                                           "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                       }
+                                                                                                        },
+                                                                                   "text/json":  {
+                                                                                                     "schema":  {
+                                                                                                                    "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                }
+                                                                                                 },
+                                                                                   "application/*+json":  {
+                                                                                                              "schema":  {
+                                                                                                                             "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                         }
+                                                                                                          }
+                                                                               }
+                                                               },
+                                               "responses":  {
+                                                                 "201":  {
+                                                                             "description":  "Created",
+                                                                             "content":  {
+                                                                                             "application/json":  {
+                                                                                                                      "schema":  {
+                                                                                                                                     "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                 }
+                                                                                                                  }
+                                                                                         }
+                                                                         },
+                                                                 "404":  {
+                                                                             "description":  "Not Found",
+                                                                             "content":  {
+                                                                                             "application/json":  {
+                                                                                                                      "schema":  {
+                                                                                                                                     "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                 }
+                                                                                                                  }
+                                                                                         }
+                                                                         }
+                                                             }
+                                           }
+                              },
+                  "/api/events":  {
+                                      "post":  {
+                                                   "tags":  [
+                                                                "Events"
+                                                            ],
+                                                   "summary":  "Створює нову подію та визначає координати (Latitude, Longitude) за допомогою Geoapify API.",
+                                                   "requestBody":  {
+                                                                       "content":  {
+                                                                                       "application/json":  {
+                                                                                                                "schema":  {
+                                                                                                                               "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                           }
+                                                                                                            },
+                                                                                       "text/json":  {
+                                                                                                         "schema":  {
+                                                                                                                        "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                    }
+                                                                                                     },
+                                                                                       "application/*+json":  {
+                                                                                                                  "schema":  {
+                                                                                                                                 "$ref":  "#/components/schemas/CreateEventRequest"
+                                                                                                                             }
+                                                                                                              }
+                                                                                   }
+                                                                   },
+                                                   "responses":  {
+                                                                     "201":  {
+                                                                                 "description":  "Created",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/EventDetailDto"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             },
+                                                                     "404":  {
+                                                                                 "description":  "Not Found",
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "$ref":  "#/components/schemas/ProblemDetails"
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             }
+                                                                 }
+                                               }
+                                  },
                   "/jobs/{id}":  {
                                      "get":  {
                                                  "tags":  [
@@ -927,6 +1219,36 @@
                                                                                    },
                                                                     "additionalProperties":  false
                                                                 },
+                                       "CreateEventRequest":  {
+                                                                  "type":  "object",
+                                                                  "properties":  {
+                                                                                     "title":  {
+                                                                                                   "type":  "string",
+                                                                                                   "nullable":  true
+                                                                                               },
+                                                                                     "description":  {
+                                                                                                         "type":  "string",
+                                                                                                         "nullable":  true
+                                                                                                     },
+                                                                                     "location":  {
+                                                                                                      "type":  "string",
+                                                                                                      "nullable":  true
+                                                                                                  },
+                                                                                     "date":  {
+                                                                                                  "type":  "string",
+                                                                                                  "format":  "date-time"
+                                                                                              },
+                                                                                     "capacity":  {
+                                                                                                      "type":  "integer",
+                                                                                                      "format":  "int32"
+                                                                                                  },
+                                                                                     "categoryId":  {
+                                                                                                        "type":  "integer",
+                                                                                                        "format":  "int32"
+                                                                                                    }
+                                                                                 },
+                                                                  "additionalProperties":  false
+                                                              },
                                        "CreateProjectRequest":  {
                                                                     "required":  [
                                                                                      "name"
@@ -985,7 +1307,13 @@
                                                                                                        "description":  "Необов’язковий ідентифікатор користувача-виконавця.",
                                                                                                        "format":  "uuid",
                                                                                                        "nullable":  true
-                                                                                                   }
+                                                                                                   },
+                                                                                    "location":  {
+                                                                                                     "maxLength":  500,
+                                                                                                     "type":  "string",
+                                                                                                     "description":  "Необов’язкова фізична адреса/локація задачі для геокодування.",
+                                                                                                     "nullable":  true
+                                                                                                 }
                                                                                 },
                                                                  "additionalProperties":  false
                                                              },
@@ -1002,6 +1330,50 @@
                                                                                  },
                                                                   "additionalProperties":  false
                                                               },
+                                       "EventDetailDto":  {
+                                                              "type":  "object",
+                                                              "properties":  {
+                                                                                 "id":  {
+                                                                                            "type":  "string",
+                                                                                            "format":  "uuid"
+                                                                                        },
+                                                                                 "title":  {
+                                                                                               "type":  "string",
+                                                                                               "nullable":  true
+                                                                                           },
+                                                                                 "description":  {
+                                                                                                     "type":  "string",
+                                                                                                     "nullable":  true
+                                                                                                 },
+                                                                                 "location":  {
+                                                                                                  "type":  "string",
+                                                                                                  "nullable":  true
+                                                                                              },
+                                                                                 "latitude":  {
+                                                                                                  "type":  "number",
+                                                                                                  "format":  "double",
+                                                                                                  "nullable":  true
+                                                                                              },
+                                                                                 "longitude":  {
+                                                                                                   "type":  "number",
+                                                                                                   "format":  "double",
+                                                                                                   "nullable":  true
+                                                                                               },
+                                                                                 "date":  {
+                                                                                              "type":  "string",
+                                                                                              "format":  "date-time"
+                                                                                          },
+                                                                                 "capacity":  {
+                                                                                                  "type":  "integer",
+                                                                                                  "format":  "int32"
+                                                                                              },
+                                                                                 "categoryId":  {
+                                                                                                    "type":  "integer",
+                                                                                                    "format":  "int32"
+                                                                                                }
+                                                                             },
+                                                              "additionalProperties":  false
+                                                          },
                                        "JobStatusDto":  {
                                                             "type":  "object",
                                                             "properties":  {
@@ -1156,17 +1528,14 @@
                                                              "properties":  {
                                                                                 "id":  {
                                                                                            "type":  "string",
-                                                                                           "description":  "Унікальний ідентифікатор задачі.",
                                                                                            "format":  "uuid"
                                                                                        },
                                                                                 "title":  {
                                                                                               "type":  "string",
-                                                                                              "description":  "Назва задачі.",
                                                                                               "nullable":  true
                                                                                           },
                                                                                 "description":  {
                                                                                                     "type":  "string",
-                                                                                                    "description":  "Детальний опис задачі.",
                                                                                                     "nullable":  true
                                                                                                 },
                                                                                 "status":  {
@@ -1177,39 +1546,46 @@
                                                                                              },
                                                                                 "dueDate":  {
                                                                                                 "type":  "string",
-                                                                                                "description":  "Дедлайн задачі (UTC).",
                                                                                                 "format":  "date-time",
                                                                                                 "nullable":  true
                                                                                             },
                                                                                 "coverImageUrl":  {
                                                                                                       "type":  "string",
-                                                                                                      "description":  "Публічний відносний URL обкладинки задачі або null.",
                                                                                                       "nullable":  true
                                                                                                   },
+                                                                                "location":  {
+                                                                                                 "type":  "string",
+                                                                                                 "nullable":  true
+                                                                                             },
+                                                                                "latitude":  {
+                                                                                                 "type":  "number",
+                                                                                                 "format":  "double",
+                                                                                                 "nullable":  true
+                                                                                             },
+                                                                                "longitude":  {
+                                                                                                  "type":  "number",
+                                                                                                  "format":  "double",
+                                                                                                  "nullable":  true
+                                                                                              },
                                                                                 "projectId":  {
                                                                                                   "type":  "string",
-                                                                                                  "description":  "Ідентифікатор проєкту.",
                                                                                                   "format":  "uuid"
                                                                                               },
                                                                                 "projectName":  {
                                                                                                     "type":  "string",
-                                                                                                    "description":  "Назва проєкту.",
                                                                                                     "nullable":  true
                                                                                                 },
                                                                                 "assigneeId":  {
                                                                                                    "type":  "string",
-                                                                                                   "description":  "Ідентифікатор призначеного виконавця.",
                                                                                                    "format":  "uuid",
                                                                                                    "nullable":  true
                                                                                                },
                                                                                 "assigneeName":  {
                                                                                                      "type":  "string",
-                                                                                                     "description":  "Ім\u0027я виконавця.",
                                                                                                      "nullable":  true
                                                                                                  },
                                                                                 "createdAt":  {
                                                                                                   "type":  "string",
-                                                                                                  "description":  "Дата створення задачі (UTC).",
                                                                                                   "format":  "date-time"
                                                                                               },
                                                                                 "comments":  {
@@ -1217,29 +1593,25 @@
                                                                                                  "items":  {
                                                                                                                "$ref":  "#/components/schemas/CommentDto"
                                                                                                            },
-                                                                                                 "description":  "Впорядкований за спаданням дати список коментарів.",
                                                                                                  "nullable":  true
                                                                                              }
                                                                             },
                                                              "additionalProperties":  false,
-                                                             "description":  "Детальна інформація про задачу із вкладеною колекцією коментарів та обкладинкою."
+                                                             "description":  "Детальна інформація про задачу із вкладеною колекцією коментарів та координатами."
                                                          },
                                        "TaskDto":  {
                                                        "type":  "object",
                                                        "properties":  {
                                                                           "id":  {
                                                                                      "type":  "string",
-                                                                                     "description":  "Унікальний ідентифікатор задачі.",
                                                                                      "format":  "uuid"
                                                                                  },
                                                                           "title":  {
                                                                                         "type":  "string",
-                                                                                        "description":  "Назва задачі.",
                                                                                         "nullable":  true
                                                                                     },
                                                                           "description":  {
                                                                                               "type":  "string",
-                                                                                              "description":  "Необов’язковий опис задачі.",
                                                                                               "nullable":  true
                                                                                           },
                                                                           "status":  {
@@ -1250,44 +1622,50 @@
                                                                                        },
                                                                           "dueDate":  {
                                                                                           "type":  "string",
-                                                                                          "description":  "Дедлайн задачі (UTC).",
                                                                                           "format":  "date-time",
                                                                                           "nullable":  true
                                                                                       },
                                                                           "coverImageUrl":  {
                                                                                                 "type":  "string",
-                                                                                                "description":  "Публічний відносний URL обкладинки задачі або null.",
                                                                                                 "nullable":  true
                                                                                             },
+                                                                          "location":  {
+                                                                                           "type":  "string",
+                                                                                           "nullable":  true
+                                                                                       },
+                                                                          "latitude":  {
+                                                                                           "type":  "number",
+                                                                                           "format":  "double",
+                                                                                           "nullable":  true
+                                                                                       },
+                                                                          "longitude":  {
+                                                                                            "type":  "number",
+                                                                                            "format":  "double",
+                                                                                            "nullable":  true
+                                                                                        },
                                                                           "projectId":  {
                                                                                             "type":  "string",
-                                                                                            "description":  "Ідентифікатор проєкту, до якого належить задача.",
                                                                                             "format":  "uuid"
                                                                                         },
                                                                           "projectName":  {
                                                                                               "type":  "string",
-                                                                                              "description":  "Назва проєкту.",
                                                                                               "nullable":  true
                                                                                           },
                                                                           "assigneeId":  {
                                                                                              "type":  "string",
-                                                                                             "description":  "Необов’язковий ідентифікатор виконавця.",
                                                                                              "format":  "uuid",
                                                                                              "nullable":  true
                                                                                          },
                                                                           "assigneeName":  {
                                                                                                "type":  "string",
-                                                                                               "description":  "Ім\u0027я виконавця.",
                                                                                                "nullable":  true
                                                                                            },
                                                                           "commentsCount":  {
                                                                                                 "type":  "integer",
-                                                                                                "description":  "Загальна кількість коментарів до задачі.",
                                                                                                 "format":  "int32"
                                                                                             },
                                                                           "createdAt":  {
                                                                                             "type":  "string",
-                                                                                            "description":  "Дата та час створення задачі (UTC).",
                                                                                             "format":  "date-time"
                                                                                         }
                                                                       },
@@ -1332,6 +1710,36 @@
                                                                    ],
                                                           "type":  "string"
                                                       },
+                                       "UpdateEventRequest":  {
+                                                                  "type":  "object",
+                                                                  "properties":  {
+                                                                                     "title":  {
+                                                                                                   "type":  "string",
+                                                                                                   "nullable":  true
+                                                                                               },
+                                                                                     "description":  {
+                                                                                                         "type":  "string",
+                                                                                                         "nullable":  true
+                                                                                                     },
+                                                                                     "location":  {
+                                                                                                      "type":  "string",
+                                                                                                      "nullable":  true
+                                                                                                  },
+                                                                                     "date":  {
+                                                                                                  "type":  "string",
+                                                                                                  "format":  "date-time"
+                                                                                              },
+                                                                                     "capacity":  {
+                                                                                                      "type":  "integer",
+                                                                                                      "format":  "int32"
+                                                                                                  },
+                                                                                     "categoryId":  {
+                                                                                                        "type":  "integer",
+                                                                                                        "format":  "int32"
+                                                                                                    }
+                                                                                 },
+                                                                  "additionalProperties":  false
+                                                              },
                                        "ValidationProblemDetails":  {
                                                                         "type":  "object",
                                                                         "properties":  {
@@ -1374,6 +1782,9 @@
                                    }
                    },
     "tags":  [
+                 {
+                     "name":  "Events"
+                 },
                  {
                      "name":  "Jobs"
                  },
