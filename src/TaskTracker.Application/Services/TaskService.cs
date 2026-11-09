@@ -199,23 +199,88 @@ public sealed class TaskService : ITaskService
             throw new NotFoundException($"Task with Id '{taskId}' does not exist.");
         }
 
-        var authorExists = await _userRepository.ExistsAsync(request.AuthorId, cancellationToken);
+        Guid authorId = request.AuthorId;
+        var authorExists = authorId != Guid.Empty && await _userRepository.ExistsAsync(authorId, cancellationToken);
         if (!authorExists)
         {
-            throw new NotFoundException($"User with Id '{request.AuthorId}' does not exist.");
+            var fallbackUser = await _userRepository.GetFirstAsync(cancellationToken);
+            if (fallbackUser is null)
+            {
+                throw new NotFoundException($"User with Id '{request.AuthorId}' does not exist.");
+            }
+            authorId = fallbackUser.Id;
         }
 
-        var comment = new Comment(taskId, request.AuthorId, request.Text.Trim());
+        var comment = new Comment(taskId, authorId, request.Text.Trim());
         await _taskRepository.AddCommentAsync(comment, cancellationToken);
         await _taskRepository.SaveChangesAsync(cancellationToken);
+
+        var author = await _userRepository.GetByIdAsync(authorId, cancellationToken);
 
         return new CommentDto(
             comment.Id,
             comment.TaskId,
             comment.AuthorId,
-            string.Empty,
+            author?.Name ?? "Користувач",
             comment.Text,
             comment.CreatedAt);
+    }
+
+    public async Task<TaskDetailDto> UpdateAsync(Guid id, UpdateTaskRequest request, CancellationToken cancellationToken = default)
+    {
+        var taskItem = await _taskRepository.GetByIdAsync(id, cancellationToken);
+        if (taskItem is null)
+        {
+            throw new NotFoundException($"Task with Id '{id}' does not exist.");
+        }
+
+        if (request.AssigneeId.HasValue)
+        {
+            var assigneeExists = await _userRepository.ExistsAsync(request.AssigneeId.Value, cancellationToken);
+            if (!assigneeExists)
+            {
+                throw new NotFoundException($"Assignee User with Id '{request.AssigneeId.Value}' does not exist.");
+            }
+        }
+
+        Coordinates? coordinates = null;
+        if (!string.IsNullOrWhiteSpace(request.Location) && request.Location != taskItem.Location)
+        {
+            coordinates = await _geocodingService.GeocodeAsync(request.Location, cancellationToken);
+        }
+
+        taskItem.Update(
+            request.Title,
+            request.Description,
+            request.Status,
+            request.Priority,
+            request.DueDate,
+            request.AssigneeId,
+            request.Location,
+            coordinates?.Latitude ?? (request.Location == taskItem.Location ? taskItem.Latitude : null),
+            coordinates?.Longitude ?? (request.Location == taskItem.Location ? taskItem.Longitude : null));
+
+        _taskRepository.Update(taskItem);
+        await _taskRepository.SaveChangesAsync(cancellationToken);
+
+        return (await _taskRepository.GetDetailByIdAsync(taskItem.Id, cancellationToken))!;
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var taskItem = await _taskRepository.GetByIdAsync(id, cancellationToken);
+        if (taskItem is null)
+        {
+            throw new NotFoundException($"Task with Id '{id}' does not exist.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(taskItem.CoverImagePath))
+        {
+            await _coverImageStorage.DeleteAsync(taskItem.CoverImagePath, cancellationToken);
+        }
+
+        _taskRepository.Delete(taskItem);
+        await _taskRepository.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<TaskDetailDto> UploadCoverAsync(Guid id, CoverImageUpload? upload, CancellationToken cancellationToken = default)

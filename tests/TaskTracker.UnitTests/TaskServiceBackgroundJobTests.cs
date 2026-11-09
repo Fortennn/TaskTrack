@@ -198,6 +198,12 @@ public sealed class TaskServiceBackgroundJobTests
 
         public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) =>
             Task.FromResult(id == expectedId);
+
+        public Task<User?> GetFirstAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<User?>(user);
+
+        public Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<User>>([user]);
     }
 
     private sealed class FakeCoverImageStorage : ICoverImageStorage

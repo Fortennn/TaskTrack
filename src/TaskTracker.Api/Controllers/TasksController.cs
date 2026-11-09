@@ -77,6 +77,46 @@ public sealed class TasksController : ControllerBase
     }
 
     /// <summary>
+    /// Оновлює задачу (назву, опис, статус, пріоритет, дедлайн, виконавця або адресу).
+    /// </summary>
+    /// <param name="id">Унікальний ідентифікатор задачі (UUID).</param>
+    /// <param name="request">Оновлені дані задачі.</param>
+    /// <param name="cancellationToken">Токен скасування операції.</param>
+    /// <response code="200">Задачу успішно оновлено.</response>
+    /// <response code="400">Помилка валідації вхідних даних.</response>
+    /// <response code="404">Задачу або виконавця не знайдено.</response>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType<TaskDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TaskDetailDto>> UpdateTask(
+        Guid id,
+        [FromBody] UpdateTaskRequest request,
+        CancellationToken cancellationToken)
+    {
+        var updated = await _taskService.UpdateAsync(id, request, cancellationToken);
+        return Ok(updated);
+    }
+
+    /// <summary>
+    /// Видаляє задачу за її ідентифікатором.
+    /// </summary>
+    /// <param name="id">Унікальний ідентифікатор задачі (UUID).</param>
+    /// <param name="cancellationToken">Токен скасування операції.</param>
+    /// <response code="204">Задачу успішно видалено.</response>
+    /// <response code="404">Задачу не знайдено.</response>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteTask(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await _taskService.DeleteAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Завантажує або оновлює зображення-обкладинку для задачі (JPEG або PNG до 5 МБ).
     /// </summary>
     /// <param name="id">Ідентифікатор задачі (UUID).</param>

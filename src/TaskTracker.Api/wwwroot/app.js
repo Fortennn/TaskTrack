@@ -3,6 +3,8 @@
 const state = {
   projects: [],
   selectedProjectId: null,
+  users: [],
+  currentUser: null,
   tasks: [],
   taskFilter: {
     status: '',
@@ -86,8 +88,22 @@ async function checkHealth() {
 }
 
 // ==========================================
-// PROJECTS & TASKS
+// PROJECTS & TASKS & USERS
 // ==========================================
+
+async function loadUsers() {
+  try {
+    const res = await fetch('/api/users');
+    if (res.ok) {
+      state.users = await res.json();
+      if (state.users.length > 0) {
+        state.currentUser = state.users[0];
+      }
+    }
+  } catch (err) {
+    console.error('Не вдалося завантажити користувачів:', err);
+  }
+}
 
 async function loadProjects() {
   try {
@@ -167,8 +183,8 @@ function renderTasks() {
     card.className = 'task-card';
 
     let coverHtml = '';
-    if (task.coverImagePath) {
-      coverHtml = `<img src="${task.coverImagePath}" class="task-cover" alt="Cover" />`;
+    if (task.coverImageUrl) {
+      coverHtml = `<img src="${task.coverImageUrl}" class="task-cover" alt="Cover" />`;
     }
 
     let locationHtml = '';
@@ -183,6 +199,8 @@ function renderTasks() {
       dueDateHtml = `<span class="badge badge-date">📅 ${d.toLocaleDateString()}</span>`;
     }
 
+    const commentsCount = task.commentsCount !== undefined ? task.commentsCount : (task.commentCount || 0);
+
     card.innerHTML = `
       ${coverHtml}
       <div class="task-title">${escapeHtml(task.title)}</div>
@@ -194,7 +212,7 @@ function renderTasks() {
         ${locationHtml}
       </div>
       <div class="task-actions">
-        <span class="task-comments-count">💬 ${task.commentCount || 0} коментарів</span>
+        <span class="task-comments-count">💬 ${commentsCount} коментарів</span>
         <div class="quick-move-btns" onclick="event.stopPropagation()">
           ${task.status !== 'Todo' ? `<button class="quick-move-btn" title="Перемістити назад" onclick="changeTaskStatus('${task.id}', '${getPrevStatus(task.status)}')">←</button>` : ''}
           ${task.status !== 'Done' ? `<button class="quick-move-btn" title="Перемістити вперед" onclick="changeTaskStatus('${task.id}', '${getNextStatus(task.status)}')">→</button>` : ''}
@@ -248,7 +266,7 @@ async function changeTaskStatus(taskId, newStatus) {
 
     if (!putRes.ok) throw new Error('Не вдалося оновити статус');
     showToast(`Статус змінено на: ${newStatus}`);
-    loadTasks();
+    await loadTasks();
   } catch (err) {
     showToast('Помилка оновлення статусу', 'error');
   }
@@ -270,11 +288,12 @@ async function openTaskDetails(taskId) {
     document.getElementById('modal-task-location').innerText = task.location ? `${task.location} (${task.latitude || '—'}, ${task.longitude || '—'})` : 'Локація не задана';
 
     const coverPreview = document.getElementById('modal-task-cover-preview');
-    if (task.coverImagePath) {
-      coverPreview.src = task.coverImagePath;
+    if (task.coverImageUrl) {
+      coverPreview.src = task.coverImageUrl;
       coverPreview.style.display = 'block';
       document.getElementById('modal-task-cover-delete').style.display = 'inline-flex';
     } else {
+      coverPreview.src = '';
       coverPreview.style.display = 'none';
       document.getElementById('modal-task-cover-delete').style.display = 'none';
     }
@@ -316,23 +335,32 @@ async function addComment() {
   const text = input.value.trim();
   if (!text) return;
 
+  if (!state.currentUser && state.users.length > 0) {
+    state.currentUser = state.users[0];
+  }
+
   try {
+    const authorId = state.currentUser ? state.currentUser.id : '00000000-0000-0000-0000-000000000000';
     const res = await fetch(`/api/tasks/${state.currentTask.id}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text: text,
-        authorId: 1
+        authorId: authorId
       })
     });
 
-    if (!res.ok) throw new Error('Помилка додавання коментаря');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Помилка додавання коментаря');
+    }
+
     input.value = '';
     showToast('Коментар додано!');
     await openTaskDetails(state.currentTask.id);
     loadTasks();
   } catch (err) {
-    showToast('Не вдалося додати коментар', 'error');
+    showToast(err.message || 'Не вдалося додати коментар', 'error');
   }
 }
 
@@ -349,7 +377,7 @@ async function uploadCover(file) {
     });
 
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Помилка завантаження');
     }
 
@@ -435,6 +463,8 @@ async function createNewTask(e) {
   const priority = document.getElementById('create-task-priority').value;
   const dueDate = document.getElementById('create-task-due').value;
   const location = document.getElementById('create-task-location').value.trim();
+  const coverInput = document.getElementById('create-task-cover-input');
+  const coverFile = coverInput && coverInput.files.length ? coverInput.files[0] : null;
 
   if (!projectId || !title) {
     showToast('Заповніть назву та виберіть проєкт', 'error');
@@ -457,13 +487,32 @@ async function createNewTask(e) {
       body: JSON.stringify(body)
     });
 
-    if (!res.ok) throw new Error('Помилка створення задачі');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Помилка створення задачі');
+    }
+
+    const data = await res.json();
+    const createdTaskId = data.task ? data.task.id : data.id;
+
+    if (coverFile && createdTaskId) {
+      const formData = new FormData();
+      formData.append('cover', coverFile);
+      const coverRes = await fetch(`/api/tasks/${createdTaskId}/cover`, {
+        method: 'POST',
+        body: formData
+      });
+      if (!coverRes.ok) {
+        showToast('Задачу створено, але не вдалося зберегти обкладинку', 'error');
+      }
+    }
+
     showToast('Задачу створено!');
     closeModal('modal-create-task');
     document.getElementById('form-create-task').reset();
-    loadTasks();
+    await loadTasks();
   } catch (err) {
-    showToast('Не вдалося створити задачу', 'error');
+    showToast(err.message || 'Не вдалося створити задачу', 'error');
   }
 }
 
@@ -706,6 +755,7 @@ function escapeHtml(str) {
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   checkHealth();
+  loadUsers();
   loadProjects();
   loadTasks();
 
@@ -733,6 +783,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modal-task-status').addEventListener('change', updateCurrentTaskFields);
   document.getElementById('modal-task-priority').addEventListener('change', updateCurrentTaskFields);
   document.getElementById('modal-task-comment-btn').addEventListener('click', addComment);
+  document.getElementById('modal-task-comment-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addComment();
+    }
+  });
   document.getElementById('modal-task-cover-input').addEventListener('change', (e) => {
     if (e.target.files.length) uploadCover(e.target.files[0]);
   });

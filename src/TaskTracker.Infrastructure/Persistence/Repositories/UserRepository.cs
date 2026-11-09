@@ -24,4 +24,14 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users.AnyAsync(u => u.Id == id, cancellationToken);
     }
+
+    public async Task<User?> GetFirstAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Users.FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Users.AsNoTracking().ToListAsync(cancellationToken);
+    }
 }

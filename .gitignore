@@ -487,3 +487,7 @@ $RECYCLE.BIN/
 # File Storage
 wwwroot/uploads/
 
+
+# Uploaded files
+src/TaskTracker.Api/wwwroot/uploads/*
+!src/TaskTracker.Api/wwwroot/uploads/.gitkeep

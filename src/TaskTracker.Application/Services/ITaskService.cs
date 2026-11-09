@@ -16,4 +16,6 @@ public interface ITaskService
     Task<TaskDetailDto> UploadCoverAsync(Guid id, CoverImageUpload? upload, CancellationToken cancellationToken = default);
     Task<CoverImageFile> GetCoverAsync(Guid id, CancellationToken cancellationToken = default);
     Task DeleteCoverAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TaskDetailDto> UpdateAsync(Guid id, UpdateTaskRequest request, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

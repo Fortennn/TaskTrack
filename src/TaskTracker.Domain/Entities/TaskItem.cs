@@ -58,4 +58,29 @@ public class TaskItem : BaseEntity
         Latitude = latitude;
         Longitude = longitude;
     }
+
+    public void Update(
+        string title, 
+        string? description, 
+        TaskStatus status, 
+        Priority priority, 
+        DateTime? dueDate, 
+        Guid? assigneeId,
+        string? location,
+        double? latitude = null,
+        double? longitude = null)
+    {
+        Title = title;
+        Description = description;
+        Status = status;
+        Priority = priority;
+        DueDate = dueDate;
+        AssigneeId = assigneeId;
+        Location = location;
+        if (latitude.HasValue || longitude.HasValue)
+        {
+            Latitude = latitude;
+            Longitude = longitude;
+        }
+    }
 }

@@ -224,4 +224,17 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
+// Автоматична ініціалізація базових користувачів, якщо таблиця порожня
+using (var seedScope = app.Services.CreateScope())
+{
+    var dbContext = seedScope.ServiceProvider.GetRequiredService<TaskTracker.Infrastructure.Persistence.ApplicationDbContext>();
+    if (!dbContext.Users.Any())
+    {
+        dbContext.Users.AddRange(
+            new TaskTracker.Domain.Entities.User("Адміністратор", "admin@tasktracker.local", TaskTracker.Domain.Enums.Role.Admin),
+            new TaskTracker.Domain.Entities.User("Олександр Петренко", "olexandr@tasktracker.local", TaskTracker.Domain.Enums.Role.Member));
+        await dbContext.SaveChangesAsync();
+    }
+}
+
 app.Run();
