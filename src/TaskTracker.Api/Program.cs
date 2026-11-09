@@ -212,11 +212,12 @@ if (app.Environment.IsDevelopment())
         options.DisplayRequestDuration();
     });
     
-    // Перенаправлення з кореневого URL на Swagger UI
-    app.MapGet("/", () => Results.Redirect("/swagger"));
+    // Маршрут /admin перенаправляє на Swagger UI
+    app.MapGet("/admin", () => Results.Redirect("/swagger"));
 }
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseAuthorization();

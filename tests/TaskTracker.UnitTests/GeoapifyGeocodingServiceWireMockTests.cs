@@ -13,8 +13,14 @@ namespace TaskTracker.UnitTests;
 [Collection("WireMockTests")]
 public sealed class GeoapifyGeocodingServiceWireMockTests : IDisposable
 {
-    private readonly WireMockServer _server = WireMockServer.Start();
+    private static readonly WireMockServer _server = WireMockServer.Start();
     private readonly MemoryCache _cache = new(new MemoryCacheOptions { SizeLimit = 100 });
+
+    public GeoapifyGeocodingServiceWireMockTests()
+    {
+        _server.Reset();
+        _server.ResetLogEntries();
+    }
 
     private GeoapifyGeocodingService CreateService(TimeSpan? timeout = null)
     {
@@ -244,8 +250,6 @@ public sealed class GeoapifyGeocodingServiceWireMockTests : IDisposable
 
     public void Dispose()
     {
-        _server.Stop();
-        _server.Dispose();
         _cache.Dispose();
     }
 }

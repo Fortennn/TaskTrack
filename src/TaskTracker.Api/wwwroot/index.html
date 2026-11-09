@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskTracker Pro — Платформа управління задачами та подіями</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div style="display:flex; align-items:center; gap:2rem;">
+      <a href="/" class="brand">
+        <span class="brand-icon">⚡</span>
+        <span>TaskTracker <small style="font-size:0.65em; font-weight:400; opacity:0.8;">Pro</small></span>
+      </a>
+
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="tasks">
+          <span>📋</span> Задачі та Проєкти
+        </button>
+        <button class="nav-tab" data-tab="events">
+          <span>🎪</span> Каталог Подій
+        </button>
+        <button class="nav-tab" data-tab="admin">
+          <span>⚙️</span> Адмінка / REST API
+        </button>
+      </nav>
+    </div>
+
+    <div class="nav-actions">
+      <div id="health-indicator" class="health-badge" title="Стан здоров'я бекенду">
+        <span class="health-dot"></span> Перевірка API...
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="openModal('modal-create-project')">
+        + Проєкт
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-create-task')">
+        + Створити задачу
+      </button>
+      <a href="/swagger" target="_blank" class="btn btn-secondary btn-sm" style="background:rgba(56,189,248,0.1); border-color:rgba(56,189,248,0.3); color:var(--accent);">
+        Swagger UI ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- ============================================== -->
+    <!-- SECTION 1: TASKS & PROJECTS                    -->
+    <!-- ============================================== -->
+    <section id="section-tasks" class="section-content active">
+      <!-- Stats Summary -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Всього задач</span>
+          <span class="stat-value" id="stat-total-tasks">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">До виконання</span>
+          <span class="stat-value" id="stat-todo-tasks" style="color:#60a5fa">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">В процесі</span>
+          <span class="stat-value" id="stat-progress-tasks" style="color:#fbbf24">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Виконано</span>
+          <span class="stat-value" id="stat-done-tasks" style="color:#34d399">0</span>
+        </div>
+      </div>
+
+      <!-- Toolbar / Filters -->
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <label style="font-size:0.85rem; font-weight:600; color:var(--text-secondary)">Проєкт:</label>
+          <select id="project-select" class="form-control" style="min-width:200px">
+            <option value="">Усі проєкти</option>
+          </select>
+
+          <input type="text" id="search-task-input" class="form-control" placeholder="🔍 Пошук за назвою..." style="min-width:220px;" />
+
+          <select id="filter-task-status" class="form-control">
+            <option value="">Усі статуси</option>
+            <option value="Todo">До виконання (Todo)</option>
+            <option value="InProgress">В процесі (InProgress)</option>
+            <option value="InReview">На перевірці (InReview)</option>
+            <option value="Done">Виконано (Done)</option>
+          </select>
+
+          <select id="filter-task-priority" class="form-control">
+            <option value="">Усі пріоритети</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+
+        <div class="toolbar-group">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-create-task')">
+            + Нова задача
+          </button>
+        </div>
+      </div>
+
+      <!-- Kanban Board -->
+      <div class="kanban-board">
+        <!-- Todo Column -->
+        <div class="kanban-col">
+          <div class="col-header">
+            <span>📌 До виконання</span>
+            <span class="col-count" id="count-todo">0</span>
+          </div>
+          <div id="col-todo" class="task-list"></div>
+        </div>
+
+        <!-- InProgress Column -->
+        <div class="kanban-col">
+          <div class="col-header">
+            <span>⚡ В процесі</span>
+            <span class="col-count" id="count-inprogress">0</span>
+          </div>
+          <div id="col-inprogress" class="task-list"></div>
+        </div>
+
+        <!-- InReview Column -->
+        <div class="kanban-col">
+          <div class="col-header">
+            <span>🔍 На перевірці</span>
+            <span class="col-count" id="count-inreview">0</span>
+          </div>
+          <div id="col-inreview" class="task-list"></div>
+        </div>
+
+        <!-- Done Column -->
+        <div class="kanban-col">
+          <div class="col-header">
+            <span>✅ Виконано</span>
+            <span class="col-count" id="count-done">0</span>
+          </div>
+          <div id="col-done" class="task-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- SECTION 2: EVENTS & GEOCODING                  -->
+    <!-- ============================================== -->
+    <section id="section-events" class="section-content">
+      <!-- B-Tree Performance Banner -->
+      <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:var(--radius-lg); padding:1rem 1.25rem; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <span style="font-size:1.75rem;">🚀</span>
+          <div>
+            <div style="font-weight:700; color:var(--text-primary)">
+              Оптимізовано складеним B-Tree індексом <code style="background:rgba(0,0,0,0.3); padding:0.1rem 0.4rem; border-radius:4px; color:var(--accent);">IX_Events_Date_Id</code>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-secondary)">
+              Запит підтримує діапазонну вибірку дат та стабільне сортування над 100 000+ подіями без перевантаження RAM (надлишкове завантаження усунено LINQ-проєкцією).
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; gap:1.5rem; font-size:0.85rem;">
+          <div>Всього в базі: <strong id="events-total-count" style="color:var(--accent)">100 000+</strong></div>
+          <div>Час запиту: <strong id="events-query-time" style="color:var(--success)">—</strong></div>
+        </div>
+      </div>
+
+      <!-- Events Filter Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <input type="text" id="event-search" class="form-control" placeholder="🔍 Пошук за назвою..." style="min-width:200px" />
+          
+          <div style="display:flex; align-items:center; gap:0.25rem;">
+            <label class="form-label" style="margin:0">Від:</label>
+            <input type="date" id="event-date-from" class="form-control" />
+          </div>
+
+          <div style="display:flex; align-items:center; gap:0.25rem;">
+            <label class="form-label" style="margin:0">До:</label>
+            <input type="date" id="event-date-to" class="form-control" />
+          </div>
+
+          <select id="event-category" class="form-control">
+            <option value="">Усі категорії</option>
+            <option value="1">Категорія #01</option>
+            <option value="2">Категорія #02</option>
+            <option value="3">Категорія #03</option>
+            <option value="4">Категорія #04</option>
+            <option value="5">Категорія #05</option>
+          </select>
+
+          <select id="event-sort-by" class="form-control">
+            <option value="date">Сортувати: Дата</option>
+            <option value="title">Сортувати: Назва</option>
+            <option value="capacity">Сортувати: Місткість</option>
+          </select>
+
+          <select id="event-order" class="form-control">
+            <option value="asc">Порядок: Зростання (ASC)</option>
+            <option value="desc">Порядок: Спадання (DESC)</option>
+          </select>
+        </div>
+
+        <div class="toolbar-group">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-create-event')">
+            + Створити подію
+          </button>
+        </div>
+      </div>
+
+      <!-- Events Grid -->
+      <div id="events-grid" class="events-grid"></div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- SECTION 3: ADMIN & REST API HUB                -->
+    <!-- ============================================== -->
+    <section id="section-admin" class="section-content">
+      <div class="admin-grid">
+        <!-- Swagger UI Launch Card -->
+        <div class="admin-card">
+          <div class="admin-card-title">
+            <span>📑</span>
+            <span>REST API Документація (Swagger UI)</span>
+          </div>
+          <p class="admin-card-desc">
+            Інтерактивна документація OpenAPI 3.0 зі зразками схем, валідацією запитів та можливістю тестувати всі ендпоінти безпосередньо в браузері.
+          </p>
+          <div style="display:flex; gap:0.75rem; margin-top:auto;">
+            <a href="/swagger" target="_blank" class="btn btn-primary" style="flex:1">
+              Відкрити Swagger UI ↗
+            </a>
+            <a href="/swagger/v1/swagger.json" target="_blank" class="btn btn-secondary">
+              OpenAPI JSON ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- System Health & Background Jobs -->
+        <div class="admin-card">
+          <div class="admin-card-title">
+            <span>🛡️</span>
+            <span>Стан Системи & Health Checks</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.875rem;">
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid var(--border-color);">
+              <span style="color:var(--text-secondary)">Health Status:</span>
+              <strong id="admin-ping-status" style="color:var(--success)">Healthy</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid var(--border-color);">
+              <span style="color:var(--text-secondary)">Database Provider:</span>
+              <span>PostgreSQL 17 (Npgsql)</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid var(--border-color);">
+              <span style="color:var(--text-secondary)">Framework:</span>
+              <span>.NET 10 (C# 12) + ASP.NET Core</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:0.5rem 0;">
+              <span style="color:var(--text-secondary)">Зовнішній API:</span>
+              <span>Geoapify Geocoding API + MemoryCache</span>
+            </div>
+          </div>
+          <a href="/health" target="_blank" class="btn btn-secondary btn-sm" style="margin-top:auto;">
+            Перевірити /health endpoint ↗
+          </a>
+        </div>
+
+        <!-- Quick API Endpoints Table -->
+        <div class="admin-card" style="grid-column: 1 / -1;">
+          <div class="admin-card-title">
+            <span>🔌</span>
+            <span>Ключові REST API Маршрути</span>
+          </div>
+          <div class="api-endpoint-list">
+            <div class="api-endpoint-item">
+              <span><span class="method-get">GET</span> /api/projects</span>
+              <span style="color:var(--text-muted)">Отримання списку проєктів</span>
+            </div>
+            <div class="api-endpoint-item">
+              <span><span class="method-post">POST</span> /api/projects</span>
+              <span style="color:var(--text-muted)">Створення нового проєкту</span>
+            </div>
+            <div class="api-endpoint-item">
+              <span><span class="method-get">GET</span> /api/tasks?projectId={id}&page=1&pageSize=20</span>
+              <span style="color:var(--text-muted)">Список задач з пагінацією та фільтрами</span>
+            </div>
+            <div class="api-endpoint-item">
+              <span><span class="method-post">POST</span> /api/tasks</span>
+              <span style="color:var(--text-muted)">Створення задачі (з геокодуванням адреси)</span>
+            </div>
+            <div class="api-endpoint-item">
+              <span><span class="method-post">POST</span> /api/tasks/{id}/cover</span>
+              <span style="color:var(--text-muted)">Завантаження обкладинки задачі (multipart/form-data)</span>
+            </div>
+            <div class="api-endpoint-item">
+              <span><span class="method-post">POST</span> /api/tasks/{id}/comments</span>
+              <span style="color:var(--text-muted)">Додавання коментаря та запуск фонового воркера</span>
+            </div>
+            <div class="api-endpoint-item">
+              <span><span class="method-get">GET</span> /events?dateFrom={date}&dateTo={date}&sortBy=date</span>
+              <span style="color:var(--text-muted)">Пошук подій з B-Tree індексом IX_Events_Date_Id</span>
+            </div>
+            <div class="api-endpoint-item">
+              <span><span class="method-post">POST</span> /events/{id}/registrations</span>
+              <span style="color:var(--text-muted)">Реєстрація учасника на подію</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================== -->
+  <!-- MODALS                                         -->
+  <!-- ============================================== -->
+
+  <!-- Modal: Task Details -->
+  <div id="modal-task-details" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-task-title" class="modal-title">Деталі задачі</h3>
+        <button class="modal-close" onclick="closeModal('modal-task-details')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <img id="modal-task-cover-preview" class="task-cover" style="height:180px; display:none; margin-bottom:0.5rem;" alt="Cover Preview" />
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>Проєкт: <strong id="modal-task-project" style="color:var(--accent)">—</strong></div>
+          <button id="modal-task-cover-delete" class="btn btn-danger btn-sm" style="display:none;">
+            Видалити обкладинку
+          </button>
+        </div>
+
+        <p id="modal-task-desc" style="color:var(--text-secondary); font-size:0.9rem;"></p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="form-group">
+            <label class="form-label">Статус:</label>
+            <select id="modal-task-status" class="form-control">
+              <option value="Todo">До виконання (Todo)</option>
+              <option value="InProgress">В процесі (InProgress)</option>
+              <option value="InReview">На перевірці (InReview)</option>
+              <option value="Done">Виконано (Done)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Пріоритет:</label>
+            <select id="modal-task-priority" class="form-control">
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Локація / Геокоординати:</label>
+          <div id="modal-task-location" style="font-size:0.85rem; color:var(--text-muted); padding:0.5rem; background:rgba(0,0,0,0.2); border-radius:var(--radius-sm)"></div>
+        </div>
+
+        <!-- Cover Upload -->
+        <div class="form-group">
+          <label class="form-label">Завантажити нову обкладинку (PNG/JPEG):</label>
+          <input type="file" id="modal-task-cover-input" class="form-control" accept="image/*" />
+        </div>
+
+        <!-- Comments Section -->
+        <div class="comments-container">
+          <div style="font-weight:700; font-size:0.95rem;">💬 Коментарі та обговорення</div>
+          <div id="modal-task-comments-list"></div>
+          <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+            <input type="text" id="modal-task-comment-input" class="form-control" placeholder="Напишіть коментар..." style="flex:1;" />
+            <button id="modal-task-comment-btn" class="btn btn-primary btn-sm">Надіслати</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-task-delete-btn" class="btn btn-danger btn-sm" style="margin-right:auto;">
+          🗑️ Видалити задачу
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-task-details')">Закрити</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Task -->
+  <div id="modal-create-task" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Нова задача</h3>
+        <button class="modal-close" onclick="closeModal('modal-create-task')">&times;</button>
+      </div>
+      <form id="form-create-task">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Проєкт *</label>
+            <select id="task-project-select" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Назва задачі *</label>
+            <input type="text" id="create-task-title" class="form-control" placeholder="Наприклад: Розробити новий модуль" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Опис</label>
+            <textarea id="create-task-desc" class="form-control" rows="3" placeholder="Деталі задачі..."></textarea>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label class="form-label">Пріоритет</label>
+              <select id="create-task-priority" class="form-control">
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Дедлайн</label>
+              <input type="date" id="create-task-due" class="form-control" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Фізична адреса (для геокодування Geoapify)</label>
+            <input type="text" id="create-task-location" class="form-control" placeholder="вул. Хрещатик, 1, Київ" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('modal-create-task')">Скасувати</button>
+          <button type="submit" class="btn btn-primary btn-sm">Створити задачу</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Create Project -->
+  <div id="modal-create-project" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Створити новий проєкт</h3>
+        <button class="modal-close" onclick="closeModal('modal-create-project')">&times;</button>
+      </div>
+      <form id="form-create-project">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Назва проєкту *</label>
+            <input type="text" id="create-project-name" class="form-control" placeholder="Наприклад: Мобільний додаток" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Опис проєкту</label>
+            <textarea id="create-project-desc" class="form-control" rows="3" placeholder="Цілі та опис проєкту..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('modal-create-project')">Скасувати</button>
+          <button type="submit" class="btn btn-primary btn-sm">Зберегти проєкт</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Create Event -->
+  <div id="modal-create-event" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Створити подію</h3>
+        <button class="modal-close" onclick="closeModal('modal-create-event')">&times;</button>
+      </div>
+      <form id="form-create-event">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Назва події *</label>
+            <input type="text" id="create-event-title" class="form-control" placeholder="Конференція .NET 10" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Опис</label>
+            <textarea id="create-event-desc" class="form-control" rows="2" placeholder="Опис події..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Локація / Адреса * (з авто-визначенням координат)</label>
+            <input type="text" id="create-event-location" class="form-control" placeholder="Майдан Незалежності, Київ, Україна" required />
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label class="form-label">Дата та час *</label>
+              <input type="datetime-local" id="create-event-date" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Місткість (місць)</label>
+              <input type="number" id="create-event-capacity" class="form-control" value="50" min="1" max="10000" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Категорія</label>
+            <select id="create-event-category" class="form-control">
+              <option value="1">Категорія #01</option>
+              <option value="2">Категорія #02</option>
+              <option value="3">Категорія #03</option>
+              <option value="4">Категорія #04</option>
+              <option value="5">Категорія #05</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('modal-create-event')">Скасувати</button>
+          <button type="submit" class="btn btn-primary btn-sm">Зберегти подію</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Register Attendee -->
+  <div id="modal-register-attendee" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Реєстрація на подію</h3>
+        <button class="modal-close" onclick="closeModal('modal-register-attendee')">&times;</button>
+      </div>
+      <form id="form-register-attendee">
+        <div class="modal-body">
+          <div>Подія: <strong id="modal-reg-event-title" style="color:var(--accent)">—</strong></div>
+          <div class="form-group">
+            <label class="form-label">Ім'я учасника *</label>
+            <input type="text" id="reg-name" class="form-control" placeholder="Олена Петренко" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email адреса *</label>
+            <input type="email" id="reg-email" class="form-control" placeholder="olena@example.com" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('modal-register-attendee')">Скасувати</button>
+          <button type="submit" class="btn btn-primary btn-sm">Підтвердити реєстрацію</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
